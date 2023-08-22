@@ -6,7 +6,7 @@ argparser.add_argument("--dataset_names", default="all", type=str)  # "all" or n
 argparser.add_argument("--dataset_path", default="DATASET/odinw", type=str)
 args = argparser.parse_args()
 
-root = "https://huggingface.co/GLIPModel/GLIP/blob/main/odinw_35"
+root = "https://huggingface.co/GLIPModel/GLIP/resolve/main/odinw_35"
 
 all_datasets = [
     "AerialMaritimeDrone",

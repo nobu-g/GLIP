@@ -1,9 +1,9 @@
 # A modification version from chainercv repository.
 # (See https://github.com/chainer/chainercv/blob/master/chainercv/evaluations/eval_detection_voc.py)
-from __future__ import division
 
 import os
 from collections import OrderedDict
+
 import numpy as np
 import torch
 from maskrcnn_benchmark.structures.bounding_box import BoxList
@@ -11,9 +11,7 @@ from maskrcnn_benchmark.structures.boxlist_ops import boxlist_iou, getUnionBBox
 
 
 # inspired from Detectron
-def evaluate_box_proposals(
-    predictions, dataset, thresholds=None, area="all", limit=None
-):
+def evaluate_box_proposals(predictions, dataset, thresholds=None, area="all", limit=None):
     """Evaluate detection proposal recall metrics. This function is a much
     faster alternative to the official COCO API recall evaluation code. However,
     it produces slightly different results.
@@ -31,16 +29,16 @@ def evaluate_box_proposals(
         "512-inf": 7,
     }
     area_ranges = [
-        [0 ** 2, 1e5 ** 2],  # all
-        [0 ** 2, 32 ** 2],  # small
-        [32 ** 2, 96 ** 2],  # medium
-        [96 ** 2, 1e5 ** 2],  # large
-        [96 ** 2, 128 ** 2],  # 96-128
-        [128 ** 2, 256 ** 2],  # 128-256
-        [256 ** 2, 512 ** 2],  # 256-512
-        [512 ** 2, 1e5 ** 2],
+        [0**2, 1e5**2],  # all
+        [0**2, 32**2],  # small
+        [32**2, 96**2],  # medium
+        [96**2, 1e5**2],  # large
+        [96**2, 128**2],  # 96-128
+        [128**2, 256**2],  # 128-256
+        [256**2, 512**2],  # 256-512
+        [512**2, 1e5**2],
     ]  # 512-inf
-    assert area in areas, "Unknown area range: {}".format(area)
+    assert area in areas, f"Unknown area range: {area}"
     area_range = area_ranges[areas[area]]
     gt_overlaps = []
     num_pos = 0
@@ -54,7 +52,7 @@ def evaluate_box_proposals(
         # deal with ground truth
         gt_boxes = dataset.get_groundtruth(image_id)
         # filter out the field "relations"
-        gt_boxes = gt_boxes.copy_with_fields(['attributes', 'labels'])
+        gt_boxes = gt_boxes.copy_with_fields(["attributes", "labels"])
         gt_areas = gt_boxes.area()
 
         if len(gt_boxes) == 0:
@@ -127,11 +125,17 @@ def evaluate_box_proposals(
     }
 
 
-class VGResults(object):
+class VGResults:
     METRICS = {
-        "bbox": ["AP",],
-        "segm": ["AP",],
-        "box_proposal": ["AR@100",],
+        "bbox": [
+            "AP",
+        ],
+        "segm": [
+            "AP",
+        ],
+        "box_proposal": [
+            "AR@100",
+        ],
     }
 
     def __init__(self, iou_type, value):
@@ -142,50 +146,54 @@ class VGResults(object):
         self.results = results
 
 
-def do_vg_evaluation(dataset, predictions, output_folder, box_only, eval_attributes, logger, save_predictions=True):
+def do_vg_evaluation(
+    dataset,
+    predictions,
+    output_folder,
+    box_only,
+    eval_attributes,
+    logger,
+    save_predictions=True,
+):
     # TODO need to make the use_07_metric format available
     # for the user to choose
-    # we use int for box_only. 0: False, 1: box for RPN, 2: box for object detection, 
+    # we use int for box_only. 0: False, 1: box for RPN, 2: box for object detection,
     if box_only:
         if box_only == 1:
             limits = [100, 1000]
         elif box_only == 2:
             limits = [36, 99]
         else:
-            raise ValueError("box_only can be either 0/1/2, but get {0}".format(box_only))
+            raise ValueError(f"box_only can be either 0/1/2, but get {box_only}")
         areas = {"all": "", "small": "s", "medium": "m", "large": "l"}
         result = {}
         for area, suffix in areas.items():
             for limit in limits:
-                logger.info("Evaluating bbox proposals@{:d}".format(limit))
-                stats = evaluate_box_proposals(
-                    predictions, dataset, area=area, limit=limit
-                )
-                key_ar = "AR{}@{:d}".format(suffix, limit)
-                key_num_pos = "num_pos{}@{:d}".format(suffix, limit)
+                logger.info(f"Evaluating bbox proposals@{limit:d}")
+                stats = evaluate_box_proposals(predictions, dataset, area=area, limit=limit)
+                key_ar = f"AR{suffix}@{limit:d}"
+                key_num_pos = f"num_pos{suffix}@{limit:d}"
                 result[key_num_pos] = stats["num_pos"]
                 result[key_ar] = stats["ar"].item()
-                key_recalls = "Recalls{}@{:d}".format(suffix, limit)
+                key_recalls = f"Recalls{suffix}@{limit:d}"
                 # result[key_recalls] = stats["recalls"]
                 print(key_recalls, stats["recalls"])
-                print(key_ar, "ar={:.4f}".format(result[key_ar]))
-                print(key_num_pos, "num_pos={:d}".format(result[key_num_pos]))
+                print(key_ar, f"ar={result[key_ar]:.4f}")
+                print(key_num_pos, f"num_pos={result[key_num_pos]:d}")
                 if limit != 1000 and dataset.relation_on:
                     # if True:
                     # relation @ 1000 (all and large) takes about 2 hs to compute
                     # relation pair evaluation
-                    logger.info("Evaluating relation proposals@{:d}".format(limit))
-                    stats = evaluate_box_proposals_for_relation(
-                        predictions, dataset, area=area, limit=limit
-                    )
-                    key_ar = "AR{}@{:d}_for_relation".format(suffix, limit)
-                    key_num_pos = "num_pos{}@{:d}_for_relation".format(suffix, limit)
+                    logger.info(f"Evaluating relation proposals@{limit:d}")
+                    stats = evaluate_box_proposals_for_relation(predictions, dataset, area=area, limit=limit)
+                    key_ar = f"AR{suffix}@{limit:d}_for_relation"
+                    key_num_pos = f"num_pos{suffix}@{limit:d}_for_relation"
                     result[key_num_pos] = stats["num_pos"]
                     result[key_ar] = stats["ar"].item()
                     # key_recalls = "Recalls{}@{:d}_for_relation".format(suffix, limit)
                     # result[key_recalls] = stats["recalls"]
-                    print(key_ar, "ar={:.4f}".format(result[key_ar]))
-                    print(key_num_pos, "num_pos={:d}".format(result[key_num_pos]))
+                    print(key_ar, f"ar={result[key_ar]:.4f}")
+                    print(key_num_pos, f"num_pos={result[key_num_pos]:d}")
         logger.info(result)
         # check_expected_results(result, expected_results, expected_results_sigma_tol)
         if output_folder and save_predictions:
@@ -194,8 +202,8 @@ def do_vg_evaluation(dataset, predictions, output_folder, box_only, eval_attribu
             elif box_only == 2:
                 torch.save(result, os.path.join(output_folder, "box_proposals.pth"))
             else:
-                raise ValueError("box_only can be either 0/1/2, but get {0}".format(box_only))
-        return VGResults('box_proposal', result["AR@100"]), {"box_proposal": result}
+                raise ValueError(f"box_only can be either 0/1/2, but get {box_only}")
+        return VGResults("box_proposal", result["AR@100"]), {"box_proposal": result}
 
     pred_boxlists = []
     gt_boxlists = []
@@ -229,15 +237,11 @@ def do_vg_evaluation(dataset, predictions, output_folder, box_only, eval_attribu
         #     continue
         # we skipped background in result['ap'], so we need to use i+1
         if eval_attributes:
-            result_str += "{:<16}: {:.4f}\n".format(
-                dataset.map_attribute_id_to_attribute_name(i+1), ap
-            )
+            result_str += f"{dataset.map_attribute_id_to_attribute_name(i + 1):<16}: {ap:.4f}\n"
         else:
-            result_str += "{:<16}: {:.4f}\n".format(
-                dataset.map_class_id_to_class_name(i+1), ap
-            )
+            result_str += f"{dataset.map_class_id_to_class_name(i + 1):<16}: {ap:.4f}\n"
     # return mAP and weighted mAP
-    vg_result = VGResults('bbox', result["map"])
+    vg_result = VGResults("bbox", result["map"])
     if eval_attributes:
         if output_folder and save_predictions:
             with open(os.path.join(output_folder, "result_attr.txt"), "w") as fid:
@@ -247,10 +251,20 @@ def do_vg_evaluation(dataset, predictions, output_folder, box_only, eval_attribu
         if output_folder and save_predictions:
             with open(os.path.join(output_folder, "result_obj.txt"), "w") as fid:
                 fid.write(result_str)
-        return vg_result, {"obj": {"map": result["map"], "weighted map": result["weighted map"]}},
+        return (
+            vg_result,
+            {"obj": {"map": result["map"], "weighted map": result["weighted map"]}},
+        )
 
 
-def eval_detection_voc(pred_boxlists, gt_boxlists, classes, iou_thresh=0.5, eval_attributes=False, use_07_metric=False):
+def eval_detection_voc(
+    pred_boxlists,
+    gt_boxlists,
+    classes,
+    iou_thresh=0.5,
+    eval_attributes=False,
+    use_07_metric=False,
+):
     """Evaluate on voc dataset.
     Args:
         pred_boxlists(list[BoxList]): pred boxlist, has labels and scores fields.
@@ -260,9 +274,7 @@ def eval_detection_voc(pred_boxlists, gt_boxlists, classes, iou_thresh=0.5, eval
     Returns:
         dict represents the results
     """
-    assert len(gt_boxlists) == len(
-        pred_boxlists
-    ), "Length of gt and pred lists need to be same."
+    assert len(gt_boxlists) == len(pred_boxlists), "Length of gt and pred lists need to be same."
 
     aps = []
     nposs = []
@@ -271,10 +283,14 @@ def eval_detection_voc(pred_boxlists, gt_boxlists, classes, iou_thresh=0.5, eval
     for i, classname in enumerate(classes):
         if classname == "__background__" or classname == "__no_attribute__":
             continue
-        rec, prec, ap, scores, npos = calc_detection_voc_prec_rec(pred_boxlists=pred_boxlists, gt_boxlists=gt_boxlists, \
-                                                                  classindex=i, iou_thresh=iou_thresh,
-                                                                  eval_attributes=eval_attributes,
-                                                                  use_07_metric=use_07_metric)
+        rec, prec, ap, scores, npos = calc_detection_voc_prec_rec(
+            pred_boxlists=pred_boxlists,
+            gt_boxlists=gt_boxlists,
+            classindex=i,
+            iou_thresh=iou_thresh,
+            eval_attributes=eval_attributes,
+            use_07_metric=use_07_metric,
+        )
         # Determine per class detection thresholds that maximise f score
         # if npos > 1:
         if npos > 1 and type(scores) != np.int:
@@ -287,10 +303,10 @@ def eval_detection_voc(pred_boxlists, gt_boxlists, classes, iou_thresh=0.5, eval
         # print('AP for {} = {:.4f} (npos={:,})'.format(classname, ap, npos))
         # if pickle:
         #     with open(os.path.join(output_dir, cls + '_pr.pkl'), 'w') as f:
-        #         cPickle.dump({'rec': rec, 'prec': prec, 'ap': ap, 
+        #         cPickle.dump({'rec': rec, 'prec': prec, 'ap': ap,
         #             'scores': scores, 'npos':npos}, f)
 
-    # Set thresh to mean for classes with poor results 
+    # Set thresh to mean for classes with poor results
     thresh = np.array(thresh)
     avg_thresh = np.mean(thresh[thresh != 0])
     thresh[thresh == 0] = avg_thresh
@@ -298,10 +314,10 @@ def eval_detection_voc(pred_boxlists, gt_boxlists, classes, iou_thresh=0.5, eval
     #     filename = 'attribute_thresholds_' + self._image_set + '.txt'
     # else:
     #     filename = 'object_thresholds_' + self._image_set + '.txt'
-    # path = os.path.join(output_dir, filename)       
+    # path = os.path.join(output_dir, filename)
     # with open(path, 'wt') as f:
     #     for i, cls in enumerate(classes[1:]):
-    #         f.write('{:s} {:.3f}\n'.format(cls, thresh[i]))           
+    #         f.write('{:s} {:.3f}\n'.format(cls, thresh[i]))
 
     weights = np.array(nposs)
     weights /= weights.sum()
@@ -320,17 +336,27 @@ def eval_detection_voc(pred_boxlists, gt_boxlists, classes, iou_thresh=0.5, eval
     # print('--------------------------------------------------------------')
 
     # pdb.set_trace()
-    return {"ap": aps, "map": np.mean(aps), "weighted map": np.average(aps, weights=weights)}
+    return {
+        "ap": aps,
+        "map": np.mean(aps),
+        "weighted map": np.average(aps, weights=weights),
+    }
 
 
-def calc_detection_voc_prec_rec(pred_boxlists, gt_boxlists, classindex, iou_thresh=0.5, eval_attributes=False,
-                                use_07_metric=False):
+def calc_detection_voc_prec_rec(
+    pred_boxlists,
+    gt_boxlists,
+    classindex,
+    iou_thresh=0.5,
+    eval_attributes=False,
+    use_07_metric=False,
+):
     """Calculate precision and recall based on evaluation code of PASCAL VOC.
     This function calculates precision and recall of
     predicted bounding boxes obtained from a dataset which has :math:`N`
     images.
     The code is based on the evaluation code used in PASCAL VOC Challenge.
-   """
+    """
     class_recs = {}
     npos = 0
     image_ids = []
@@ -357,9 +383,11 @@ def calc_detection_voc_prec_rec(pred_boxlists, gt_boxlists, classindex, iou_thre
         gt_difficult_l = np.zeros(gt_bbox_l.shape[0], dtype=bool)
         det = [False] * gt_bbox_l.shape[0]
         npos = npos + sum(~gt_difficult_l)
-        class_recs[image_index] = {'bbox': gt_bbox_l,
-                                   'difficult': gt_difficult_l,
-                                   'det': det}
+        class_recs[image_index] = {
+            "bbox": gt_bbox_l,
+            "difficult": gt_difficult_l,
+            "det": det,
+        }
 
         # prediction output for each class
         # pdb.set_trace()
@@ -403,7 +431,7 @@ def calc_detection_voc_prec_rec(pred_boxlists, gt_boxlists, classindex, iou_thre
         R = class_recs[image_ids[d]]
         bb = BB[d, :].astype(float)
         ovmax = -np.inf
-        BBGT = R['bbox'].astype(float)
+        BBGT = R["bbox"].astype(float)
 
         if BBGT.size > 0:
             # compute overlaps
@@ -412,28 +440,30 @@ def calc_detection_voc_prec_rec(pred_boxlists, gt_boxlists, classindex, iou_thre
             iymin = np.maximum(BBGT[:, 1], bb[1])
             ixmax = np.minimum(BBGT[:, 2], bb[2])
             iymax = np.minimum(BBGT[:, 3], bb[3])
-            iw = np.maximum(ixmax - ixmin + 1., 0.)
-            ih = np.maximum(iymax - iymin + 1., 0.)
+            iw = np.maximum(ixmax - ixmin + 1.0, 0.0)
+            ih = np.maximum(iymax - iymin + 1.0, 0.0)
             inters = iw * ih
 
             # union
-            uni = ((bb[2] - bb[0] + 1.) * (bb[3] - bb[1] + 1.) +
-                   (BBGT[:, 2] - BBGT[:, 0] + 1.) *
-                   (BBGT[:, 3] - BBGT[:, 1] + 1.) - inters)
+            uni = (
+                (bb[2] - bb[0] + 1.0) * (bb[3] - bb[1] + 1.0)
+                + (BBGT[:, 2] - BBGT[:, 0] + 1.0) * (BBGT[:, 3] - BBGT[:, 1] + 1.0)
+                - inters
+            )
 
             overlaps = inters / uni
             ovmax = np.max(overlaps)
             jmax = np.argmax(overlaps)
 
         if ovmax > iou_thresh:
-            if not R['difficult'][jmax]:
-                if not R['det'][jmax]:
-                    tp[d] = 1.
-                    R['det'][jmax] = 1
+            if not R["difficult"][jmax]:
+                if not R["det"][jmax]:
+                    tp[d] = 1.0
+                    R["det"][jmax] = 1
                 else:
-                    fp[d] = 1.
+                    fp[d] = 1.0
         else:
-            fp[d] = 1.
+            fp[d] = 1.0
 
     # compute precision recall
     fp = np.cumsum(fp)
@@ -448,25 +478,25 @@ def calc_detection_voc_prec_rec(pred_boxlists, gt_boxlists, classindex, iou_thre
 
 
 def voc_ap(rec, prec, use_07_metric=False):
-    """ ap = voc_ap(rec, prec, [use_07_metric])
+    """ap = voc_ap(rec, prec, [use_07_metric])
     Compute VOC AP given precision and recall.
     If use_07_metric is true, uses the
     VOC 07 11 point method (default:False).
     """
     if use_07_metric:
         # 11 point metric
-        ap = 0.
-        for t in np.arange(0., 1.1, 0.1):
+        ap = 0.0
+        for t in np.arange(0.0, 1.1, 0.1):
             if np.sum(rec >= t) == 0:
                 p = 0
             else:
                 p = np.max(prec[rec >= t])
-            ap = ap + p / 11.
+            ap = ap + p / 11.0
     else:
         # correct AP calculation
         # first append sentinel values at the end
-        mrec = np.concatenate(([0.], rec, [1.]))
-        mpre = np.concatenate(([0.], prec, [0.]))
+        mrec = np.concatenate(([0.0], rec, [1.0]))
+        mpre = np.concatenate(([0.0], prec, [0.0]))
 
         # compute the precision envelope
         for i in range(mpre.size - 1, 0, -1):
@@ -541,11 +571,8 @@ def calc_detection_voc_ap(prec, rec, use_07_metric=False):
 
 
 # inspired from Detectron
-def evaluate_box_proposals_for_relation(
-        predictions, dataset, thresholds=None, area="all", limit=None
-):
-    """Evaluate how many relation pairs can be captured by the proposed boxes.
-    """
+def evaluate_box_proposals_for_relation(predictions, dataset, thresholds=None, area="all", limit=None):
+    """Evaluate how many relation pairs can be captured by the proposed boxes."""
     # Record max overlap value for each gt box
     # Return vector of overlap values
     areas = {
@@ -559,16 +586,16 @@ def evaluate_box_proposals_for_relation(
         "512-inf": 7,
     }
     area_ranges = [
-        [0 ** 2, 1e5 ** 2],  # all
-        [0 ** 2, 32 ** 2],  # small
-        [32 ** 2, 96 ** 2],  # medium
-        [96 ** 2, 1e5 ** 2],  # large
-        [96 ** 2, 128 ** 2],  # 96-128
-        [128 ** 2, 256 ** 2],  # 128-256
-        [256 ** 2, 512 ** 2],  # 256-512
-        [512 ** 2, 1e5 ** 2],
+        [0**2, 1e5**2],  # all
+        [0**2, 32**2],  # small
+        [32**2, 96**2],  # medium
+        [96**2, 1e5**2],  # large
+        [96**2, 128**2],  # 96-128
+        [128**2, 256**2],  # 128-256
+        [256**2, 512**2],  # 256-512
+        [512**2, 1e5**2],
     ]  # 512-inf
-    assert area in areas, "Unknown area range: {}".format(area)
+    assert area in areas, f"Unknown area range: {area}"
     area_range = area_ranges[areas[area]]
     gt_overlaps = []
     num_pos = 0
@@ -585,10 +612,10 @@ def evaluate_box_proposals_for_relation(
         gt_triplets = gt_boxes.get_field("relation_labels")
         if len(gt_triplets) == 0:
             continue
-        gt_boxes = gt_boxes.copy_with_fields(['attributes', 'labels'])
+        gt_boxes = gt_boxes.copy_with_fields(["attributes", "labels"])
         # get union bounding boxes (the box that cover both)
         gt_relations = getUnionBBox(gt_boxes[gt_triplets[:, 0]], gt_boxes[gt_triplets[:, 1]], margin=0)
-        gt_relations.add_field('rel_classes', gt_triplets[:, 2])
+        gt_relations.add_field("rel_classes", gt_triplets[:, 2])
         # focus on the range interested
         gt_relation_areas = gt_relations.area()
         valid_gt_inds = (gt_relation_areas >= area_range[0]) & (gt_relation_areas <= area_range[1])

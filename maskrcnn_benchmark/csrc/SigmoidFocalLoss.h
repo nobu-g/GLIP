@@ -10,8 +10,8 @@
 at::Tensor SigmoidFocalLoss_forward(
 		const at::Tensor& logits,
                 const at::Tensor& targets,
-		const int num_classes, 
-		const float gamma, 
+		const int num_classes,
+		const float gamma,
 		const float alpha) {
   if (logits.device().is_cuda()) {
 #ifdef WITH_CUDA

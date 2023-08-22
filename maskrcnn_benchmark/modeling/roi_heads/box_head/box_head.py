@@ -1,12 +1,13 @@
 # Copyright (c) Facebook, Inc. and its affiliates. All Rights Reserved.
 import torch
+from maskrcnn_benchmark.utils.amp import custom_bwd, custom_fwd
 from torch import nn
 
-from .roi_box_feature_extractors import make_roi_box_feature_extractor
-from .roi_box_predictors import make_roi_box_predictor
 from .inference import make_roi_box_post_processor
 from .loss import make_roi_box_loss_evaluator
-from maskrcnn_benchmark.utils.amp import custom_fwd, custom_bwd
+from .roi_box_feature_extractors import make_roi_box_feature_extractor
+from .roi_box_predictors import make_roi_box_predictor
+
 
 class ROIBoxHead(torch.nn.Module):
     """
@@ -14,7 +15,7 @@ class ROIBoxHead(torch.nn.Module):
     """
 
     def __init__(self, cfg):
-        super(ROIBoxHead, self).__init__()
+        super().__init__()
         self.feature_extractor = make_roi_box_feature_extractor(cfg)
         self.predictor = make_roi_box_predictor(cfg)
         self.post_processor = make_roi_box_post_processor(cfg)
@@ -50,15 +51,17 @@ class ROIBoxHead(torch.nn.Module):
         class_logits, box_regression = self.predictor(x)
 
         if self.onnx:
-            return x, (class_logits, box_regression, [box.bbox for box in proposals]), {}
+            return (
+                x,
+                (class_logits, box_regression, [box.bbox for box in proposals]),
+                {},
+            )
 
         if not self.training:
             result = self.post_processor((class_logits, box_regression), proposals)
             return x, result, {}
 
-        loss_classifier, loss_box_reg = self.loss_evaluator(
-            [class_logits], [box_regression]
-        )
+        loss_classifier, loss_box_reg = self.loss_evaluator([class_logits], [box_regression])
         return (
             x,
             proposals,

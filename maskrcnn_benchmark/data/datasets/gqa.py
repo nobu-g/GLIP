@@ -12,18 +12,27 @@ class GQADataset(ModulatedDataset):
 
 
 class GQAQuestionAnswering(torchvision.datasets.CocoDetection):
-    def __init__(self, img_folder, ann_file, transforms, return_masks, return_tokens, tokenizer, ann_folder):
-        super(GQAQuestionAnswering, self).__init__(img_folder, ann_file)
+    def __init__(
+        self,
+        img_folder,
+        ann_file,
+        transforms,
+        return_masks,
+        return_tokens,
+        tokenizer,
+        ann_folder,
+    ):
+        super().__init__(img_folder, ann_file)
         self._transforms = transforms
         self.prepare = ConvertCocoPolysToMask(return_masks, return_tokens, tokenizer=tokenizer)
-        with open(ann_folder / "gqa_answer2id.json", "r") as f:
+        with open(ann_folder / "gqa_answer2id.json") as f:
             self.answer2id = json.load(f)
-        with open(ann_folder / "gqa_answer2id_by_type.json", "r") as f:
+        with open(ann_folder / "gqa_answer2id_by_type.json") as f:
             self.answer2id_by_type = json.load(f)
         self.type2id = {"obj": 0, "attr": 1, "rel": 2, "global": 3, "cat": 4}
 
     def __getitem__(self, idx):
-        img, target = super(GQAQuestionAnswering, self).__getitem__(idx)
+        img, target = super().__getitem__(idx)
         image_id = self.ids[idx]
         coco_img = self.coco.loadImgs(image_id)[0]
         caption = coco_img["caption"]

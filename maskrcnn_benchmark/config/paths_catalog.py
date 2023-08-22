@@ -4,16 +4,16 @@
 import os
 
 
-def try_to_find(file, return_dir=False, search_path=['./DATASET', './OUTPUT', './data', './MODEL']):
+def try_to_find(file, return_dir=False, search_path=["./DATASET", "./OUTPUT", "./data", "./MODEL"]):
     if not file:
         return file
 
-    if file.startswith('catalog://'):
+    if file.startswith("catalog://"):
         return file
 
-    DATASET_PATH = ['./']
-    if 'DATASET' in os.environ:
-        DATASET_PATH.append(os.environ['DATASET'])
+    DATASET_PATH = ["./"]
+    if "DATASET" in os.environ:
+        DATASET_PATH.append(os.environ["DATASET"])
     DATASET_PATH += search_path
 
     for path in DATASET_PATH:
@@ -23,11 +23,11 @@ def try_to_find(file, return_dir=False, search_path=['./DATASET', './OUTPUT', '.
             else:
                 return os.path.join(path, file)
 
-    print('Cannot find {} in {}'.format(file, DATASET_PATH))
+    print(f"Cannot find {file} in {DATASET_PATH}")
     exit(1)
 
 
-class DatasetCatalog(object):
+class DatasetCatalog:
     DATASETS = {
         # pretrained grounding dataset
         # mixed vg and coco
@@ -41,46 +41,40 @@ class DatasetCatalog(object):
             "vg_img_dir": "gqa/images",
             "ann_file": "mdetr_annotations/final_mixed_train_no_coco.json",
         },
-
         # flickr30k
         "flickr30k_train": {
             "img_folder": "flickr30k/flickr30k_images/train",
             "ann_file": "mdetr_annotations/final_flickr_separateGT_train.json",
-            "is_train": True
+            "is_train": True,
         },
         "flickr30k_val": {
             "img_folder": "flickr30k/flickr30k_images/val",
             "ann_file": "mdetr_annotations/final_flickr_separateGT_val.json",
-            "is_train": False
+            "is_train": False,
         },
         "flickr30k_test": {
             "img_folder": "flickr30k/flickr30k_images/test",
             "ann_file": "mdetr_annotations/final_flickr_separateGT_test.json",
-            "is_train": False
+            "is_train": False,
         },
-
         # refcoco
         "refexp_all_val": {
             "img_dir": "refcoco/train2014",
             "ann_file": "mdetr_annotations/final_refexp_val.json",
-            "is_train": False
+            "is_train": False,
         },
-
         # gqa
         "gqa_val": {
             "img_dir": "gqa/images",
             "ann_file": "mdetr_annotations/final_gqa_val.json",
-            "is_train": False
+            "is_train": False,
         },
-
         # phrasecut
         "phrasecut_train": {
             "img_dir": "gqa/images",
             "ann_file": "mdetr_annotations/finetune_phrasecut_train.json",
-            "is_train": True
+            "is_train": True,
         },
-
-
         # od to grounding
         # coco tsv
         "coco_dt_train": {
@@ -130,28 +124,24 @@ class DatasetCatalog(object):
             "yaml_path": "Objects365/val.yaml",
             "is_train": False,
         },
-
         # ImagetNet OD
         "imagenetod_train_odinw_2copy_dt": {
             "dataset_file": "imagenetod_odinw_dt",
             "yaml_path": "imagenet_od/imagenetod_train_odinw_2copy.yaml",
             "is_train": True,
         },
-
         # OpenImage OD
         "oi_train_odinw_dt": {
             "dataset_file": "oi_odinw_dt",
             "yaml_path": "openimages_v5c/oi_train_odinw.cas.2000.yaml",
             "is_train": True,
         },
-
         # vg tsv
         "vg_dt_train": {
             "dataset_file": "vg_dt",
             "yaml_path": "visualgenome/train_vgoi6_clipped.yaml",
             "is_train": True,
         },
-
         "vg_odinw_clipped_8copy_dt_train": {
             "dataset_file": "vg_odinw_clipped_8copy_dt",
             "yaml_path": "visualgenome/train_odinw_clipped_8copy.yaml",
@@ -162,47 +152,43 @@ class DatasetCatalog(object):
             "yaml_path": "visualgenome/train_vgoi6_clipped_8copy.yaml",
             "is_train": True,
         },
-
         # coco json
         "coco_grounding_train": {
             "img_dir": "coco/train2017",
             "ann_file": "coco/annotations/instances_train2017.json",
             "is_train": True,
         },
-
         "lvis_grounding_train": {
             "img_dir": "coco",
-            "ann_file": "coco/annotations/lvis_od_train.json"
+            "ann_file": "coco/annotations/lvis_od_train.json",
         },
-
-
         "lvis_val": {
             "img_dir": "coco",
-            "ann_file": "coco/annotations/lvis_od_val.json"
+            "ann_file": "coco/annotations/lvis_od_val.json",
         },
         "coco_2017_train": {
             "img_dir": "coco/train2017",
-            "ann_file": "coco/annotations/instances_train2017.json"
+            "ann_file": "coco/annotations/instances_train2017.json",
         },
         "coco_2017_val": {
             "img_dir": "coco/val2017",
-            "ann_file": "coco/annotations/instances_val2017.json"
+            "ann_file": "coco/annotations/instances_val2017.json",
         },
         "coco_2017_test": {
             "img_dir": "coco/test2017",
-            "ann_file": "coco/annotations/image_info_test-dev2017.json"
+            "ann_file": "coco/annotations/image_info_test-dev2017.json",
         },
         "coco_2014_train": {
             "img_dir": "coco/train2014",
-            "ann_file": "coco/annotations/instances_train2014.json"
+            "ann_file": "coco/annotations/instances_train2014.json",
         },
         "coco_2014_val": {
             "img_dir": "coco/val2014",
-            "ann_file": "coco/annotations/instances_val2014.json"
+            "ann_file": "coco/annotations/instances_val2014.json",
         },
         "coco_2014_minival": {
             "img_dir": "coco/val2014",
-            "ann_file": "coco/annotations/instances_minival2014.json"
+            "ann_file": "coco/annotations/instances_minival2014.json",
         },
     }
 
@@ -212,8 +198,7 @@ class DatasetCatalog(object):
 
     @staticmethod
     def get(name):
-
-        if name.endswith('_bg'):
+        if name.endswith("_bg"):
             attrs = DatasetCatalog.DATASETS[name]
             data_dir = try_to_find(attrs["ann_file"], return_dir=True)
             args = dict(
@@ -230,7 +215,7 @@ class DatasetCatalog(object):
             else:
                 attrs = DatasetCatalog.DATASETS[name]
 
-            if "voc" in name and 'split' in attrs:
+            if "voc" in name and "split" in attrs:
                 data_dir = try_to_find(attrs["data_dir"], return_dir=True)
                 args = dict(
                     data_dir=os.path.join(data_dir, attrs["data_dir"]),
@@ -247,7 +232,7 @@ class DatasetCatalog(object):
                 args = dict(
                     img_folder_coco=os.path.join(coco_img_dir, attrs["coco_img_dir"]),
                     img_folder_vg=os.path.join(vg_img_dir, attrs["vg_img_dir"]),
-                    ann_file=os.path.join(ann_file, attrs["ann_file"])
+                    ann_file=os.path.join(ann_file, attrs["ann_file"]),
                 )
                 return dict(
                     factory="MixedDataset",
@@ -259,7 +244,7 @@ class DatasetCatalog(object):
                 args = dict(
                     img_folder=os.path.join(img_dir, attrs["img_folder"]),
                     ann_file=os.path.join(ann_dir, attrs["ann_file"]),
-                    is_train=attrs["is_train"]
+                    is_train=attrs["is_train"],
                 )
                 return dict(
                     factory="FlickrDataset",
@@ -305,25 +290,20 @@ class DatasetCatalog(object):
                 else:
                     yaml_name = attrs["yaml_name"]
                 yaml_file_name = "{}.{}.yaml".format(yaml_name, name.split("_")[2])
-                args = dict(
-                    yaml_file=os.path.join(yaml_path, attrs["yaml_path"], yaml_file_name)
-                )
+                args = dict(yaml_file=os.path.join(yaml_path, attrs["yaml_path"], yaml_file_name))
                 return dict(
                     factory="CaptionTSV",
                     args=args,
                 )
             elif "inferencecap" in name:
                 yaml_file_name = try_to_find(attrs["yaml_path"])
-                args = dict(
-                    yaml_file=yaml_file_name)
+                args = dict(yaml_file=yaml_file_name)
                 return dict(
                     factory="CaptionTSV",
                     args=args,
                 )
             elif "pseudo_data" in name:
-                args = dict(
-                    yaml_file=try_to_find(attrs["yaml_path"])
-                )
+                args = dict(yaml_file=try_to_find(attrs["yaml_path"]))
                 return dict(
                     factory="PseudoData",
                     args=args,
@@ -386,10 +366,10 @@ class DatasetCatalog(object):
                     args=args,
                 )
 
-        raise RuntimeError("Dataset not available: {}".format(name))
+        raise RuntimeError(f"Dataset not available: {name}")
 
 
-class ModelCatalog(object):
+class ModelCatalog:
     S3_C2_DETECTRON_URL = "https://dl.fbaipublicfiles.com/detectron"
     C2_IMAGENET_MODELS = {
         "MSRA/R-50": "ImageNetPretrained/MSRA/R-50.pkl",
@@ -418,12 +398,12 @@ class ModelCatalog(object):
             return ModelCatalog.get_c2_detectron_12_2017_baselines(name)
         if name.startswith("ImageNetPretrained"):
             return ModelCatalog.get_c2_imagenet_pretrained(name)
-        raise RuntimeError("model not present in the catalog {}".format(name))
+        raise RuntimeError(f"model not present in the catalog {name}")
 
     @staticmethod
     def get_c2_imagenet_pretrained(name):
         prefix = ModelCatalog.S3_C2_DETECTRON_URL
-        name = name[len("ImageNetPretrained/"):]
+        name = name[len("ImageNetPretrained/") :]
         name = ModelCatalog.C2_IMAGENET_MODELS[name]
         url = "/".join([prefix, name])
         return url
@@ -436,11 +416,11 @@ class ModelCatalog(object):
         prefix = ModelCatalog.S3_C2_DETECTRON_URL
         suffix = ModelCatalog.C2_DETECTRON_SUFFIX
         # remove identification prefix
-        name = name[len("Caffe2Detectron/COCO/"):]
+        name = name[len("Caffe2Detectron/COCO/") :]
         # split in <model_id> and <model_name>
         model_id, model_name = name.split("/")
         # parsing to make it match the url address from the Caffe2 models
-        model_name = "{}.yaml".format(model_name)
+        model_name = f"{model_name}.yaml"
         signature = ModelCatalog.C2_DETECTRON_MODELS[name]
         unique_name = ".".join([model_name, signature])
         url = "/".join([prefix, model_id, "12_2017_baselines", unique_name, suffix])

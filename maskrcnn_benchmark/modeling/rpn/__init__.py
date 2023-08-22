@@ -1,19 +1,20 @@
 # Copyright (c) Facebook, Inc. and its affiliates. All Rights Reserved.
 # from .rpn import build_rpn
-from .rpn import RPNModule
-from .retina import RetinaNetModule
-from .fcos import FCOSModule
 from .atss import ATSSModule
 from .dyhead import DyHeadModule
+from .fcos import FCOSModule
+from .retina import RetinaNetModule
+from .rpn import RPNModule
 from .vldyhead import VLDyHeadModule
 
-_RPN_META_ARCHITECTURES = {"RPN": RPNModule,
-                           "RETINA": RetinaNetModule,
-                           "FCOS": FCOSModule,
-                           "ATSS": ATSSModule,
-                           "DYHEAD": DyHeadModule,
-                           "VLDYHEAD": VLDyHeadModule
-                           }
+_RPN_META_ARCHITECTURES = {
+    "RPN": RPNModule,
+    "RETINA": RetinaNetModule,
+    "FCOS": FCOSModule,
+    "ATSS": ATSSModule,
+    "DYHEAD": DyHeadModule,
+    "VLDYHEAD": VLDyHeadModule,
+}
 
 
 def build_rpn(cfg):

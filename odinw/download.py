@@ -2,13 +2,47 @@ import argparse
 import os
 
 argparser = argparse.ArgumentParser()
-argparser.add_argument("--dataset_names", default="all", type=str) # "all" or names joined by comma
+argparser.add_argument("--dataset_names", default="all", type=str)  # "all" or names joined by comma
 argparser.add_argument("--dataset_path", default="DATASET/odinw", type=str)
 args = argparser.parse_args()
 
 root = "https://huggingface.co/GLIPModel/GLIP/blob/main/odinw_35"
 
-all_datasets = ["AerialMaritimeDrone", "AmericanSignLanguageLetters", "Aquarium", "BCCD", "ChessPieces", "CottontailRabbits", "DroneControl", "EgoHands", "HardHatWorkers", "MaskWearing", "MountainDewCommercial", "NorthAmericaMushrooms", "OxfordPets", "PKLot", "Packages", "PascalVOC", "Raccoon", "ShellfishOpenImages", "ThermalCheetah", "UnoCards", "VehiclesOpenImages", "WildfireSmoke", "boggleBoards", "brackishUnderwater", "dice", "openPoetryVision", "pistols", "plantdoc", "pothole", "selfdrivingCar", "thermalDogsAndPeople", "vector", "websiteScreenshots"]
+all_datasets = [
+    "AerialMaritimeDrone",
+    "AmericanSignLanguageLetters",
+    "Aquarium",
+    "BCCD",
+    "ChessPieces",
+    "CottontailRabbits",
+    "DroneControl",
+    "EgoHands",
+    "HardHatWorkers",
+    "MaskWearing",
+    "MountainDewCommercial",
+    "NorthAmericaMushrooms",
+    "OxfordPets",
+    "PKLot",
+    "Packages",
+    "PascalVOC",
+    "Raccoon",
+    "ShellfishOpenImages",
+    "ThermalCheetah",
+    "UnoCards",
+    "VehiclesOpenImages",
+    "WildfireSmoke",
+    "boggleBoards",
+    "brackishUnderwater",
+    "dice",
+    "openPoetryVision",
+    "pistols",
+    "plantdoc",
+    "pothole",
+    "selfdrivingCar",
+    "thermalDogsAndPeople",
+    "vector",
+    "websiteScreenshots",
+]
 
 datasets_to_download = []
 if args.dataset_names == "all":

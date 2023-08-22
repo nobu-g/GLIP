@@ -1,22 +1,23 @@
-from maskrcnn_benchmark.structures.boxlist_ops import boxlist_iou
-from maskrcnn_benchmark.structures.bounding_box import BoxList
 import json
-import numpy as np
-import os.path as osp
 import os
-from prettytable import PrettyTable
-
+import os.path as osp
 import xml.etree.ElementTree as ET
 from collections import defaultdict
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Sequence, Tuple, Union
 
 import maskrcnn_benchmark.utils.mdetr_dist as dist
+import numpy as np
+from maskrcnn_benchmark.structures.bounding_box import BoxList
+from maskrcnn_benchmark.structures.boxlist_ops import boxlist_iou
+from prettytable import PrettyTable
+
 #### The following loading utilities are imported from
 #### https://github.com/BryanPlummer/flickr30k_entities/blob/68b3d6f12d1d710f96233f6bd2b6de799d6f4e5b/flickr30k_entities_utils.py
 # Changelog:
 #    - Added typing information
 #    - Completed docstrings
+
 
 def get_sentence_data(filename) -> List[Dict[str, Any]]:
     """
@@ -38,7 +39,7 @@ def get_sentence_data(filename) -> List[Dict[str, Any]]:
                                     phrase belongs to
 
     """
-    with open(filename, "r") as f:
+    with open(filename) as f:
         sentences = f.read().split("\n")
 
     annotations = []
@@ -78,7 +79,12 @@ def get_sentence_data(filename) -> List[Dict[str, Any]]:
         sentence_data = {"sentence": " ".join(words), "phrases": []}
         for index, phrase, p_id, p_type in zip(first_word, phrases, phrase_id, phrase_type):
             sentence_data["phrases"].append(
-                {"first_word_index": index, "phrase": phrase, "phrase_id": p_id, "phrase_type": p_type}
+                {
+                    "first_word_index": index,
+                    "phrase": phrase,
+                    "phrase_id": p_id,
+                    "phrase_type": p_type,
+                }
             )
 
         annotations.append(sentence_data)
@@ -86,7 +92,9 @@ def get_sentence_data(filename) -> List[Dict[str, Any]]:
     return annotations
 
 
-def get_annotations(filename) -> Dict[str, Union[int, List[str], Dict[str, List[List[int]]]]]:
+def get_annotations(
+    filename,
+) -> Dict[str, Union[int, List[str], Dict[str, List[List[int]]]]]:
     """
     Parses the xml files in the Flickr30K Entities dataset
 
@@ -204,6 +212,7 @@ def box_iou(boxes1: np.array, boxes2: np.array) -> np.array:
 
 #### End of import of box utilities
 
+
 def _merge_boxes(boxes: List[List[int]]) -> List[List[int]]:
     """
     Return the boxes corresponding to the smallest enclosing box containing all the provided boxes
@@ -214,11 +223,18 @@ def _merge_boxes(boxes: List[List[int]]) -> List[List[int]]:
 
     np_boxes = np.asarray(boxes)
 
-    return [[np_boxes[:, 0].min(), np_boxes[:, 1].min(), np_boxes[:, 2].max(), np_boxes[:, 3].max()]]
+    return [
+        [
+            np_boxes[:, 0].min(),
+            np_boxes[:, 1].min(),
+            np_boxes[:, 2].max(),
+            np_boxes[:, 3].max(),
+        ]
+    ]
 
 
 class RecallTracker:
-    """ Utility class to track recall@k for various k, split by categories"""
+    """Utility class to track recall@k for various k, split by categories"""
 
     def __init__(self, topk: Sequence[int]):
         """
@@ -257,13 +273,13 @@ class RecallTracker:
 
 class Flickr30kEntitiesRecallEvaluator:
     def __init__(
-            self,
-            flickr_path: str,
-            subset: str = "test",
-            topk: Sequence[int] = (1, 5, 10, -1),
-            iou_thresh: float = 0.5,
-            merge_boxes: bool = False,
-            verbose: bool = True,
+        self,
+        flickr_path: str,
+        subset: str = "test",
+        topk: Sequence[int] = (1, 5, 10, -1),
+        iou_thresh: float = 0.5,
+        merge_boxes: bool = False,
+        verbose: bool = True,
     ):
         assert subset in ["train", "test", "val"], f"Wrong flickr subset {subset}"
 
@@ -390,19 +406,24 @@ class Flickr30kEntitiesRecallEvaluator:
         return recall_tracker.report()
 
 
-class FlickrEvaluator(object):
+class FlickrEvaluator:
     def __init__(
-            self,
-            flickr_path,
-            subset,
-            top_k=(1, 5, 10, -1),
-            iou_thresh=0.5,
-            merge_boxes=False,
+        self,
+        flickr_path,
+        subset,
+        top_k=(1, 5, 10, -1),
+        iou_thresh=0.5,
+        merge_boxes=False,
     ):
         assert isinstance(top_k, (list, tuple))
 
         self.evaluator = Flickr30kEntitiesRecallEvaluator(
-            flickr_path, subset=subset, topk=top_k, iou_thresh=iou_thresh, merge_boxes=merge_boxes, verbose=False
+            flickr_path,
+            subset=subset,
+            topk=top_k,
+            iou_thresh=iou_thresh,
+            merge_boxes=merge_boxes,
+            verbose=False,
         )
         self.predictions = []
         self.results = None

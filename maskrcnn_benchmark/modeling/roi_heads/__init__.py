@@ -2,8 +2,8 @@
 import torch
 
 from .box_head.box_head import build_roi_box_head
-from .mask_head.mask_head import build_roi_mask_head
 from .keypoint_head.keypoint_head import build_roi_keypoint_head
+from .mask_head.mask_head import build_roi_mask_head
 
 
 class CombinedROIHeads(torch.nn.ModuleDict):
@@ -13,14 +13,21 @@ class CombinedROIHeads(torch.nn.ModuleDict):
     """
 
     def __init__(self, cfg, heads):
-        super(CombinedROIHeads, self).__init__(heads)
+        super().__init__(heads)
         self.cfg = cfg.clone()
         if cfg.MODEL.MASK_ON and cfg.MODEL.ROI_MASK_HEAD.SHARE_BOX_FEATURE_EXTRACTOR:
             self.mask.feature_extractor = self.box.feature_extractor
         if cfg.MODEL.KEYPOINT_ON and cfg.MODEL.ROI_KEYPOINT_HEAD.SHARE_BOX_FEATURE_EXTRACTOR:
             self.keypoint.feature_extractor = self.box.feature_extractor
 
-    def forward(self, features, proposals, targets=None, language_dict_features=None, positive_map_label_to_token=None):
+    def forward(
+        self,
+        features,
+        proposals,
+        targets=None,
+        language_dict_features=None,
+        positive_map_label_to_token=None,
+    ):
         losses = {}
         detections = proposals
         if self.cfg.MODEL.BOX_ON:
@@ -32,27 +39,24 @@ class CombinedROIHeads(torch.nn.ModuleDict):
             mask_features = features
             # optimization: during training, if we share the feature extractor between
             # the box and the mask heads, then we can reuse the features already computed
-            if (
-                    self.training
-                    and self.cfg.MODEL.ROI_MASK_HEAD.SHARE_BOX_FEATURE_EXTRACTOR
-            ):
+            if self.training and self.cfg.MODEL.ROI_MASK_HEAD.SHARE_BOX_FEATURE_EXTRACTOR:
                 mask_features = x
             # During training, self.box() will return the unaltered proposals as "detections"
             # this makes the API consistent during training and testing
             x, detections, loss_mask = self.mask(
-                mask_features, detections, targets,
+                mask_features,
+                detections,
+                targets,
                 language_dict_features=language_dict_features,
-                positive_map_label_to_token=positive_map_label_to_token)
+                positive_map_label_to_token=positive_map_label_to_token,
+            )
             losses.update(loss_mask)
 
         if self.cfg.MODEL.KEYPOINT_ON:
             keypoint_features = features
             # optimization: during training, if we share the feature extractor between
             # the box and the mask heads, then we can reuse the features already computed
-            if (
-                    self.training
-                    and self.cfg.MODEL.ROI_KEYPOINT_HEAD.SHARE_BOX_FEATURE_EXTRACTOR
-            ):
+            if self.training and self.cfg.MODEL.ROI_KEYPOINT_HEAD.SHARE_BOX_FEATURE_EXTRACTOR:
                 keypoint_features = x
             # During training, self.box() will return the unaltered proposals as "detections"
             # this makes the API consistent during training and testing

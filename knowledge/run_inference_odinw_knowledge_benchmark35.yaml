@@ -69,7 +69,7 @@ storage:
     container_name: phillytools
   penzhanwu2v2data:
     storage_account_name: penzhanwu2v2
-    container_name: data 
+    container_name: data
   penzhanwu2data:
     storage_account_name: penzhanwu2
     container_name: data
@@ -87,13 +87,13 @@ storage:
     container_name: model
   odinw_data:
     storage_account_name: vlpdatasets
-    container_name: odinw    
+    container_name: odinw
   penzhanwu2amlt:
     storage_account_name: penzhanwu2
     container_name: amulet
   output_storage:
     storage_account_name: chunyleu
-    container_name: output 
+    container_name: output
 
 
 code:
@@ -128,7 +128,7 @@ search:
       #- cp /mnt/penzhanwu2amlt/projects/swint_dyhead_ablation/amlt-results/7365119660.39362-37fbb6df-e4a6-432f-b9ea-feca56c444cd/model_0695000.pth ./ MODEL.WEIGHT model_0695000.pth
       - export TOKENIZERS_PARALLELISM=True
 
-      - python tools/test_grounding_net.py --config-file {model_dir}/config.yml --weight {model_dir}/model_{ckpt}.pth 
+      - python tools/test_grounding_net.py --config-file {model_dir}/config.yml --weight {model_dir}/model_{ckpt}.pth
         --task_config configs/odinw_workshop_fewshot/{task_name}.yaml
         TEST.EVAL_TASK detection TEST.IMS_PER_BATCH 1
         DATALOADER.DISTRIBUTE_CHUNK_AMONG_NODE False MODEL.DYHEAD.USE_CHECKPOINT False DATASETS.PREDOWNLOAD_BING False DATASETS.PREDOWNLOAD_WITH_AZCOPY False DATASETS.USE_OVERRIDE_CATEGORY True DATASETS.USE_CAPTION_PROMPT True
@@ -141,23 +141,23 @@ search:
         shm_size: 64G
   max_trials: 1000
   type: grid
-  params:    
+  params:
     - name: ckpt
       spec: discrete
-      values: ['0350000'] # ['0050000','0100000','0150000','0200000','0250000','0300000','0350000'] # ['0367500']  # [vitb16_CLIP] [swin_t]  # [swin_t_CLIP] 
+      values: ['0350000'] # ['0050000','0100000','0150000','0200000','0250000','0300000','0350000'] # ['0367500']  # [vitb16_CLIP] [swin_t]  # [swin_t_CLIP]
     - name: knowledge_file
       spec: discrete
-      values: ['odinw_benchmark35_knowledge_and_gpt3']   # ['odinw_knowledge_with_prompt','odinw_knowledge']     
+      values: ['odinw_benchmark35_knowledge_and_gpt3']   # ['odinw_knowledge_with_prompt','odinw_knowledge']
     - name: knowledge_type
       spec: discrete
-      values: ['def_wiki','path_wn3','def_wn'] # ['gpt3']   # ['odinw_knowledge_with_prompt','odinw_knowledge']            
+      values: ['def_wiki','path_wn3','def_wn'] # ['gpt3']   # ['odinw_knowledge_with_prompt','odinw_knowledge']
     - name: model_dir
       spec: discrete
       values: [/mnt/penzhanwu2data/xiaowh/glip_for_od/glip-a_def_wiki_maxcls365_laggfirst,/mnt/penzhanwu2data/xiaowh/glip_for_od/glip-a_maxcls365_laggfirst] # [/mnt/penzhanwu2data/xiaowh/glip_for_od/glip-a_def_wiki_maxcls365_laggfirst] # [5,20,50] # [5,20,50,-1] # [5,20,50], [-1], [5,20,50,-1] # https://penzhanwu2.blob.core.windows.net/data/xiaowh/glip_for_od/glip-a_def_wiki_maxcls365_laggfirst/config.yml
     - name: task_name
       spec: discrete
-      values: ['boggleBoards_416x416AutoOrient_export_','ChessPieces_Chess_Pieces.v23-raw.coco'] 
-      
+      values: ['boggleBoards_416x416AutoOrient_export_','ChessPieces_Chess_Pieces.v23-raw.coco']
+
       # ['AerialMaritimeDrone_large','AerialMaritimeDrone_tiled','AmericanSignLanguageLetters_American_Sign_Language_Letters.v1-v1.coco','Aquarium_Aquarium_Combined.v2-raw-1024.coco','BCCD_BCCD.v3-raw.coco','ChessPieces_Chess_Pieces.v23-raw.coco','CottontailRabbits','DroneControl_Drone_Control.v3-raw.coco','EgoHands_generic','EgoHands_specific','HardHatWorkers_raw','MaskWearing_raw','MountainDewCommercial','NorthAmericaMushrooms_North_American_Mushrooms.v1-416x416.coco','OxfordPets_by-breed','OxfordPets_by-species','PKLot_640','Packages_Raw','PascalVOC','Raccoon_Raccoon.v2-raw.coco','ShellfishOpenImages_raw','ThermalCheetah','UnoCards_raw','VehiclesOpenImages_416x416','WildfireSmoke','boggleBoards_416x416AutoOrient_export_','brackishUnderwater_960x540','dice_mediumColor_export','openPoetryVision_512x512','pistols_export','plantdoc_416x416','pothole','selfdrivingCar_fixedLarge_export_','thermalDogsAndPeople','websiteScreenshots']
       # ['configs/odinw_workshop_fewshot/AerialMaritimeDrone_large.yaml','configs/odinw_workshop_fewshot/AerialMaritimeDrone_tiled.yaml','configs/odinw_workshop_fewshot/AmericanSignLanguageLetters_American_Sign_Language_Letters.v1-v1.coco.yaml','configs/odinw_workshop_fewshot/Aquarium_Aquarium_Combined.v2-raw-1024.coco.yaml','configs/odinw_workshop_fewshot/BCCD_BCCD.v3-raw.coco.yaml','configs/odinw_workshop_fewshot/ChessPieces_Chess_Pieces.v23-raw.coco.yaml','configs/odinw_workshop_fewshot/CottontailRabbits.yaml','configs/odinw_workshop_fewshot/DroneControl_Drone_Control.v3-raw.coco.yaml','configs/odinw_workshop_fewshot/EgoHands_generic.yaml','configs/odinw_workshop_fewshot/EgoHands_specific.yaml','configs/odinw_workshop_fewshot/HardHatWorkers_raw.yaml','configs/odinw_workshop_fewshot/MaskWearing_raw.yaml','configs/odinw_workshop_fewshot/MountainDewCommercial.yaml','configs/odinw_workshop_fewshot/NorthAmericaMushrooms_North_American_Mushrooms.v1-416x416.coco.yaml','configs/odinw_workshop_fewshot/OxfordPets_by-breed.yaml','configs/odinw_workshop_fewshot/OxfordPets_by-species.yaml','configs/odinw_workshop_fewshot/PKLot_640.yaml','configs/odinw_workshop_fewshot/Packages_Raw.yaml','configs/odinw_workshop_fewshot/PascalVOC.yaml','configs/odinw_workshop_fewshot/Raccoon_Raccoon.v2-raw.coco.yaml','configs/odinw_workshop_fewshot/ShellfishOpenImages_raw.yaml','configs/odinw_workshop_fewshot/ThermalCheetah.yaml','configs/odinw_workshop_fewshot/UnoCards_raw.yaml','configs/odinw_workshop_fewshot/VehiclesOpenImages_416x416.yaml','configs/odinw_workshop_fewshot/WildfireSmoke.yaml','configs/odinw_workshop_fewshot/boggleBoards_416x416AutoOrient_export_.yaml','configs/odinw_workshop_fewshot/brackishUnderwater_960x540.yaml','configs/odinw_workshop_fewshot/dice_mediumColor_export.yaml','configs/odinw_workshop_fewshot/openPoetryVision_512x512.yaml','configs/odinw_workshop_fewshot/pistols_export.yaml','configs/odinw_workshop_fewshot/plantdoc_416x416.yaml','configs/odinw_workshop_fewshot/pothole.yaml','configs/odinw_workshop_fewshot/selfdrivingCar_fixedLarge_export_.yaml','configs/odinw_workshop_fewshot/thermalDogsAndPeople.yaml','configs/odinw_workshop_fewshot/websiteScreenshots.yaml']
 
@@ -165,7 +165,7 @@ search:
 #         --task_config configs/odinw_caption/Pascal2012.yaml,configs/odinw_caption/AerialMaritimeDrone_large_test.yaml,configs/odinw_caption/AerialMaritimeDrone_large.yaml,configs/odinw_caption/AerialMaritimeDrone_tiled_test.yaml,configs/odinw_caption/AerialMaritimeDrone_tiled.yaml,configs/odinw_caption/Aquarium_Aquarium_Combined.v2-raw-1024.coco_test.yaml,configs/odinw_caption/Aquarium_Aquarium_Combined.v2-raw-1024.coco.yaml,configs/odinw_caption/CottontailRabbits_test.yaml,configs/odinw_caption/CottontailRabbits.yaml,configs/odinw_caption/EgoHands_generic_test.yaml,configs/odinw_caption/EgoHands_generic.yaml,configs/odinw_caption/NorthAmericaMushrooms_North_American_Mushrooms.v1-416x416.coco_test.yaml,configs/odinw_caption/NorthAmericaMushrooms_North_American_Mushrooms.v1-416x416.coco.yaml,configs/odinw_caption/Packages_Raw_test.yaml,configs/odinw_caption/Packages_Raw.yaml,configs/odinw_caption/Raccoon_Raccoon.v2-raw.coco_test.yaml,configs/odinw_caption/Raccoon_Raccoon.v2-raw.coco.yaml,configs/odinw_caption/ShellfishOpenImages_raw_test.yaml,configs/odinw_caption/ShellfishOpenImages_raw.yaml,configs/odinw_caption/VehiclesOpenImages_416x416_test.yaml,configs/odinw_caption/VehiclesOpenImages_416x416.yaml,configs/odinw_caption/pistols_export_test.yaml,configs/odinw_caption/pistols_export.yaml,configs/odinw_caption/pothole_test.yaml,configs/odinw_caption/pothole.yaml,configs/odinw_caption/thermalDogsAndPeople_test.yaml,configs/odinw_caption/thermalDogsAndPeople.yaml
 
 
-# [odinw_knowledge.yaml OR odinw_knowledge_with_prompt.yaml]      
+# [odinw_knowledge.yaml OR odinw_knowledge_with_prompt.yaml]
 # jobs:
 #   - name: _bidirectional #vldyhead_swint_s_Obj365_GoldGround_FusionSingle_LangOn_E30_Bsz64_HCRR
 #     sku: 2xG16
@@ -204,7 +204,7 @@ search:
 #         MODEL.DYHEAD.FUSE_CONFIG.CLAMP_BERTATTN_MAX_FOR_OVERFLOW True
 #         MODEL.DYHEAD.FUSE_CONFIG.SEPARATE_BIDIRECTIONAL True
 #         SOLVER.FIND_UNUSED_PARAMETERS True
-#         MODEL.DYHEAD.USE_CHECKPOINT True 
+#         MODEL.DYHEAD.USE_CHECKPOINT True
 #         # MODEL.LANGUAGE_BACKBONE.N_LAYERS 4
 
 #     submit_args:

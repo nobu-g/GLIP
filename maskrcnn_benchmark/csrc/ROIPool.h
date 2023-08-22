@@ -43,6 +43,3 @@ at::Tensor ROIPool_backward(const at::Tensor& grad,
   }
   AT_ERROR("Not implemented on the CPU");
 }
-
-
-

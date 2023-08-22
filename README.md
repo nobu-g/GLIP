@@ -1,13 +1,13 @@
-# GLIP: Grounded Language-Image Pre-training  
+# GLIP: Grounded Language-Image Pre-training
 
-<img src="docs/lead.png" width="800"> 
+<img src="docs/lead.png" width="800">
 
 
 ## Updates
 * 01/17/2023: From image understanding to image generation for open-set grounding? Check out [**GLIGEN (Grounded Language-to-Image Generation)**](https://gligen.github.io/)
   - GLIGEN:  (box, concept) $\rightarrow$ image  ||  GLIP:    image $\rightarrow$ (box, concept)
 
-* 09/19/2022: GLIPv2 has been accepted to NeurIPS 2022 ([Updated Version](https://arxiv.org/abs/2206.05836)). 
+* 09/19/2022: GLIPv2 has been accepted to NeurIPS 2022 ([Updated Version](https://arxiv.org/abs/2206.05836)).
 
 * 09/18/2022: Organizing ECCV Workshop [*Computer Vision in the Wild (CVinW)*](https://computer-vision-in-the-wild.github.io/eccv-2022/), where two challenges are hosted to evaluate the zero-shot, few-shot and full-shot performance of pre-trained vision models in downstream tasks:
   - [``*Image Classification in the Wild (ICinW)*''](https://eval.ai/web/challenges/challenge-page/1832/overview) Challenge evaluates on 20 image classification tasks.
@@ -19,7 +19,7 @@ $\qquad$    [<img src="https://evalai.s3.amazonaws.com/media/logos/e3727105-2b29
 
 * 09/13/2022: Updated [HuggingFace Demo](https://huggingface.co/spaces/haotiz/glip-zeroshot-demo)! Feel free to give it a try!!!
 
-  -  Acknowledgement: Many thanks to the help from @[HuggingFace](https://huggingface.co/) for a Space GPU upgrade to host the GLIP demo! 
+  -  Acknowledgement: Many thanks to the help from @[HuggingFace](https://huggingface.co/) for a Space GPU upgrade to host the GLIP demo!
 
 * 06/21/2022: GLIP has been selected as a Best Paper Finalist at CVPR 2022!
 
@@ -36,7 +36,7 @@ $\qquad$    [<img src="https://evalai.s3.amazonaws.com/media/logos/e3727105-2b29
 * 11/23/2021: Project page built. <br/>
 
 ## Introduction
-This repository is the project page for [GLIP](https://arxiv.org/abs/2112.03857).  GLIP demonstrate strong zero-shot and few-shot transferability to various object-level recognition tasks. 
+This repository is the project page for [GLIP](https://arxiv.org/abs/2112.03857).  GLIP demonstrate strong zero-shot and few-shot transferability to various object-level recognition tasks.
 
 1. When directly evaluated on COCO and LVIS (without seeing any images in COCO), GLIP achieves 49.8 AP and 26.9 AP, respectively, surpassing many supervised baselines.
 2. After fine-tuned on COCO, GLIP achieves 60.8 AP on val and 61.5 AP on test-dev, surpassing prior SoTA.
@@ -63,11 +63,11 @@ This repo requires Pytorch>=1.9 and torchvision. We recommand using docker to se
 Then install the following packages:
 ```
 pip install einops shapely timm yacs tensorboardX ftfy prettytable pymongo
-pip install transformers 
+pip install transformers
 python setup.py build develop --user
 ```
 
-***Backbone Checkpoints.*** Download the ImageNet pre-trained backbone checkpoints into the ``MODEL`` folder. 
+***Backbone Checkpoints.*** Download the ImageNet pre-trained backbone checkpoints into the ``MODEL`` folder.
 ```
 mkdir MODEL
 wget https://penzhanwu2bbs.blob.core.windows.net/data/GLIPv1_Open/models/swin_tiny_patch4_window7_224.pth -O swin_tiny_patch4_window7_224.pth
@@ -149,7 +149,7 @@ python -m torch.distributed.launch --nproc_per_node=4 \
         --config-file {config_file} \
         --task_config configs/lvis/minival.yaml \
         --weight {model_checkpoint} \
-        TEST.EVAL_TASK detection OUTPUT_DIR {output_dir} 
+        TEST.EVAL_TASK detection OUTPUT_DIR {output_dir}
         TEST.CHUNKED_EVALUATION 40  TEST.IMS_PER_BATCH 4 SOLVER.IMS_PER_BATCH 4 TEST.MDETR_STYLE_AGGREGATE_CLASS_NUM 3000 MODEL.RETINANET.DETECTIONS_PER_IMG 300 MODEL.FCOS.DETECTIONS_PER_IMG 300 MODEL.ATSS.DETECTIONS_PER_IMG 300 MODEL.ROI_HEADS.DETECTIONS_PER_IMG 300
 ```
 If you wish to evaluate on Val 1.0, set ``--task_config`` to ``configs/lvis/val.yaml``.
@@ -161,7 +161,7 @@ GLIP supports easy evaluation on a custom dataset. Currently, the code supports 
 
 We will use the [Aquarium](https://public.roboflow.com/object-detection/aquarium) dataset from ODinW as an example to show how to evaluate on a custom COCO-formatted dataset.
 
-1. Download the raw dataset from RoboFlow in the COCO format into ``DATASET/odinw/Aquarium``. Each train/val/test split has a corresponding ``annotation`` file and a ``image`` folder. 
+1. Download the raw dataset from RoboFlow in the COCO format into ``DATASET/odinw/Aquarium``. Each train/val/test split has a corresponding ``annotation`` file and a ``image`` folder.
 
 2. Remove the background class from the annotation file. This can be as simple as open "_annotations.coco.json" and remove the entry with "id:0" from "categories". For convenience, we provide the modified annotation files for  Aquarium:
     ```
@@ -169,7 +169,7 @@ We will use the [Aquarium](https://public.roboflow.com/object-detection/aquarium
     wget https://penzhanwu2bbs.blob.core.windows.net/data/GLIPv1_Open/odinw/Aquarium/Aquarium%20Combined.v2-raw-1024.coco/train/annotations_without_background.json -O DATASET/odinw/Aquarium/Aquarium\ Combined.v2-raw-1024.coco/train/annotations_without_background.json
     wget https://penzhanwu2bbs.blob.core.windows.net/data/GLIPv1_Open/odinw/Aquarium/Aquarium%20Combined.v2-raw-1024.coco/valid/annotations_without_background.json -O DATASET/odinw/Aquarium/Aquarium\ Combined.v2-raw-1024.coco/valid/annotations_without_background.json
     ```
-    
+
 4. Then create a yaml file as in ``configs/odinw_13/Aquarium_Aquarium_Combined.v2-raw-1024.coco.yaml``. A few fields to be noted in the yamls:
 
     DATASET.CAPTION_PROMPT allows manually changing the prompt (the default prompt is simply concatnating all the categories);
@@ -248,19 +248,19 @@ SOLVER.TUNING_HIGHLEVEL_OVERRIDE language_prompt_v2
 
 
 ## The Object Detection in the Wild Benchmark
-<img src="docs/word_cloud_od.png" width="400"> 
-<img src="docs/benchmark_example_od.png" width="300"> 
+<img src="docs/word_cloud_od.png" width="400">
+<img src="docs/benchmark_example_od.png" width="300">
 
 ODinW was first proposed in GLIP and refined and formalized in [ELEVATER](https://arxiv.org/pdf/2204.08790.pdf). GLIP used 13 downstream tasks while the full ODinW has 35 downstream tasks. It will be hosted as a challenge at [the CV in the Wild Workshop @ ECCV 2022](https://computer-vision-in-the-wild.github.io/eccv-2022/). We hope our code encourage the community to participate in this challenge!
 
-ODinW was introduced in GLIP and initially contained 13 datasets. We further expand the datasets by including more datasets from RoboFlow and the final version contains **35** datasets. 
+ODinW was introduced in GLIP and initially contained 13 datasets. We further expand the datasets by including more datasets from RoboFlow and the final version contains **35** datasets.
 
 To distinguish between the two versions, we denote the version used by GLIP as ``ODinW-13`` and the version used by the CVinW workshop as ``ODinW-35``.
 
 This repo also provides the necessary code to train and evaluate on ODinW. See instructions below.
 
 #### Download ODinW
-RoboFlow hosts all the original datasets. We are also hosting the datasets and provide a simple script the download all the data. 
+RoboFlow hosts all the original datasets. We are also hosting the datasets and provide a simple script the download all the data.
 ```
 python odinw/download_datasets.py
 ```
@@ -339,15 +339,15 @@ python tools/test_grounding_net.py --config-file configs/pretrain/glip_A_Swin_T_
 
 #### Submit Your Results to ODinw Leaderboard
 
-The participant teams are encouraged to upload their results to [ODinW leaderboard](https://eval.ai/web/challenges/challenge-page/1839/overview) on EvalAI. From the perspective od data labeling cost, lowering the requirement of data requirement enables more scenarios, a varied number of tracks are considered in the challenge: zero-shot, few-shot, and full-shot. Please see the ODinW website for more details about each phase. 
+The participant teams are encouraged to upload their results to [ODinW leaderboard](https://eval.ai/web/challenges/challenge-page/1839/overview) on EvalAI. From the perspective od data labeling cost, lowering the requirement of data requirement enables more scenarios, a varied number of tracks are considered in the challenge: zero-shot, few-shot, and full-shot. Please see the ODinW website for more details about each phase.
 
 1. For zero/full shot setting, the required format for prediction json file is
 ```
 {
       "dataset_name (e.g., 'WildFireSmoke')":
-            [value]: value is following the COCO's 
-            result format, which contains 
-            ["image_id":xxx, "category_id":xxx, 
+            [value]: value is following the COCO's
+            result format, which contains
+            ["image_id":xxx, "category_id":xxx,
             "bbox":xxx, "score":xxx]
 }
 ```
@@ -358,10 +358,10 @@ Please see one provided example for zero shot prediction file: [all_predictions_
 {
       "dataset_name (e.g., "WildFireSmoke")":{
             "rand_seed_num (e.g., "30")":
-                  [value]: value is following the 
-                  COCO's result format, which 
-                  contains ["image_id":xxx, 
-                  "category_id":xxx, "bbox":xxx, 
+                  [value]: value is following the
+                  COCO's result format, which
+                  contains ["image_id":xxx,
+                  "category_id":xxx, "bbox":xxx,
                   "score":xxx]
      }
 }

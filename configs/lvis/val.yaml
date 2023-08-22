@@ -15,7 +15,7 @@ DATASETS:
     lvis_evaluation_val:
       img_dir: "coco"
       ann_file: "coco/annotations/lvis_od_val.json"
-  TRAIN: ("lvis_evaluation_val",) 
+  TRAIN: ("lvis_evaluation_val",)
   TEST: ("lvis_evaluation_val",)
 
 INPUT:

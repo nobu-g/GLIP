@@ -1,13 +1,12 @@
 # Copyright (c) Facebook, Inc. and its affiliates. All Rights Reserved.
 import torch
+from maskrcnn_benchmark.structures.bounding_box import BoxList
 from torch import nn
 
-from maskrcnn_benchmark.structures.bounding_box import BoxList
-
-from .roi_mask_feature_extractors import make_roi_mask_feature_extractor
-from .roi_mask_predictors import make_roi_mask_predictor
 from .inference import make_roi_mask_post_processor
 from .loss import make_roi_mask_loss_evaluator
+from .roi_mask_feature_extractors import make_roi_mask_feature_extractor
+from .roi_mask_predictors import make_roi_mask_predictor
 
 
 def keep_only_positive_boxes(boxes):
@@ -35,17 +34,21 @@ def keep_only_positive_boxes(boxes):
 
 class ROIMaskHead(torch.nn.Module):
     def __init__(self, cfg):
-        super(ROIMaskHead, self).__init__()
+        super().__init__()
         self.cfg = cfg.clone()
         self.feature_extractor = make_roi_mask_feature_extractor(cfg)
         self.predictor = make_roi_mask_predictor(cfg)
         self.post_processor = make_roi_mask_post_processor(cfg)
         self.loss_evaluator = make_roi_mask_loss_evaluator(cfg)
 
-    def forward(self, features, proposals, targets=None,
-                language_dict_features=None,
-                positive_map_label_to_token=None
-                ):
+    def forward(
+        self,
+        features,
+        proposals,
+        targets=None,
+        language_dict_features=None,
+        positive_map_label_to_token=None,
+    ):
         """
         Arguments:
             features (list[Tensor]): feature-maps from possibly several levels

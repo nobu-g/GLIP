@@ -7,7 +7,14 @@ readme = "README.md"
 
 [tool.poetry.dependencies]
 python = ">=3.9,<3.10"
-torch = { url = "https://download.pytorch.org/whl/cu111/torch-1.9.1%2Bcu111-cp39-cp39-linux_x86_64.whl" }
+#torch = [
+#    { platform = "linux", url = "https://download.pytorch.org/whl/cu111/torch-1.9.1%2Bcu111-cp39-cp39-linux_x86_64.whl" },
+#    { platform = "darwin", version = "1.9.1" },
+#]
+torch = [
+  { version = "1.9.1+cu111", source = "torch_cu111", markers = "extra=='cuda'" },
+  { version = "1.9.1+cpu", source = "torch_cpu", markers = "extra!='cuda'" },
+]
 torchvision = "^0.10.1"
 transformers = "~4.29.2"
 einops = "^0.6.1"
@@ -25,6 +32,37 @@ opencv-python = "4.5.5.64"
 
 [tool.poetry.group.dev.dependencies]
 ipdb = "^0.13.13"
+
+[[tool.poetry.source]]
+name = "torch_cpu"
+url = "https://download.pytorch.org/whl/cpu"
+priority = "supplemental"
+
+[[tool.poetry.source]]
+name = "torch_cu111"
+url = "https://download.pytorch.org/whl/cu111"
+priority = "supplemental"
+
+[[tool.poetry.source]]
+name = "PyPI"
+priority = "primary"
+
+[tool.poetry.extras]
+cuda = []
+
+[tool.black]
+line-length = 120
+target-version = ["py38", "py39", "py310", "py311"]
+
+[tool.isort]
+line_length = 120
+py_version = 39
+profile = "black"
+src_paths = ["src"]
+
+[tool.flake8]
+ignore = ["E203", "E501", "W503"]
+max-line-length = 120
 
 [build-system]
 requires = ["poetry-core"]

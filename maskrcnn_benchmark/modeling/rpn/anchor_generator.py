@@ -3,11 +3,11 @@ import math
 
 import numpy as np
 import torch
+from maskrcnn_benchmark.structures.bounding_box import BoxList
+from maskrcnn_benchmark.structures.boxlist_ops import cat_boxlist
+from maskrcnn_benchmark.structures.image_list import ImageList
 from torch import nn
 
-from maskrcnn_benchmark.structures.bounding_box import BoxList
-from maskrcnn_benchmark.structures.image_list import ImageList
-from maskrcnn_benchmark.structures.boxlist_ops import cat_boxlist
 
 class BufferList(nn.Module):
     """
@@ -15,7 +15,7 @@ class BufferList(nn.Module):
     """
 
     def __init__(self, buffers=None):
-        super(BufferList, self).__init__()
+        super().__init__()
         if buffers is not None:
             self.extend(buffers)
 
@@ -45,13 +45,11 @@ class AnchorGenerator(nn.Module):
         anchor_strides=(8, 16, 32),
         straddle_thresh=0,
     ):
-        super(AnchorGenerator, self).__init__()
+        super().__init__()
 
         if len(anchor_strides) == 1:
             anchor_stride = anchor_strides[0]
-            cell_anchors = [
-                generate_anchors(anchor_stride, sizes, aspect_ratios).float()
-            ]
+            cell_anchors = [generate_anchors(anchor_stride, sizes, aspect_ratios).float()]
         else:
             if len(anchor_strides) != len(sizes):
                 raise RuntimeError("FPN should have #anchor_strides == #sizes")
@@ -59,7 +57,7 @@ class AnchorGenerator(nn.Module):
                 generate_anchors(
                     anchor_stride,
                     size if isinstance(size, (tuple, list)) else (size,),
-                    aspect_ratios
+                    aspect_ratios,
                 ).float()
                 for anchor_stride, size in zip(anchor_strides, sizes)
             ]
@@ -72,25 +70,17 @@ class AnchorGenerator(nn.Module):
 
     def grid_anchors(self, grid_sizes):
         anchors = []
-        for size, stride, base_anchors in zip(
-            grid_sizes, self.strides, self.cell_anchors
-        ):
+        for size, stride, base_anchors in zip(grid_sizes, self.strides, self.cell_anchors):
             grid_height, grid_width = size
             device = base_anchors.device
-            shifts_x = torch.arange(
-                0, grid_width * stride, step=stride, dtype=torch.float32, device=device
-            )
-            shifts_y = torch.arange(
-                0, grid_height * stride, step=stride, dtype=torch.float32, device=device
-            )
+            shifts_x = torch.arange(0, grid_width * stride, step=stride, dtype=torch.float32, device=device)
+            shifts_y = torch.arange(0, grid_height * stride, step=stride, dtype=torch.float32, device=device)
             shift_y, shift_x = torch.meshgrid(shifts_y, shifts_x)
             shift_x = shift_x.reshape(-1)
             shift_y = shift_y.reshape(-1)
             shifts = torch.stack((shift_x, shift_y, shift_x, shift_y), dim=1)
 
-            anchors.append(
-                (shifts.view(-1, 1, 4) + base_anchors.view(1, -1, 4)).reshape(-1, 4)
-            )
+            anchors.append((shifts.view(-1, 1, 4) + base_anchors.view(1, -1, 4)).reshape(-1, 4))
 
         return anchors
 
@@ -118,18 +108,18 @@ class AnchorGenerator(nn.Module):
                 anchors_in_image = []
                 for anchors_per_feature_map in anchors_over_all_feature_maps:
                     boxlist = BoxList(
-                        anchors_per_feature_map, (image_width, image_height), mode="xyxy"
+                        anchors_per_feature_map,
+                        (image_width, image_height),
+                        mode="xyxy",
                     )
                     self.add_visibility_to(boxlist)
                     anchors_in_image.append(boxlist)
                 anchors.append(anchors_in_image)
         else:
-            image_height, image_width = [int(x) for x in image_list.size()[-2:]]
+            image_height, image_width = (int(x) for x in image_list.size()[-2:])
             anchors_in_image = []
             for anchors_per_feature_map in anchors_over_all_feature_maps:
-                boxlist = BoxList(
-                    anchors_per_feature_map, (image_width, image_height), mode="xyxy"
-                )
+                boxlist = BoxList(anchors_per_feature_map, (image_width, image_height), mode="xyxy")
                 self.add_visibility_to(boxlist)
                 anchors_in_image.append(boxlist)
             anchors.append(anchors_in_image)
@@ -143,14 +133,10 @@ def make_anchor_generator(config):
     straddle_thresh = config.MODEL.RPN.STRADDLE_THRESH
 
     if config.MODEL.RPN.USE_FPN:
-        assert len(anchor_stride) == len(
-            anchor_sizes
-        ), "FPN should have len(ANCHOR_STRIDE) == len(ANCHOR_SIZES)"
+        assert len(anchor_stride) == len(anchor_sizes), "FPN should have len(ANCHOR_STRIDE) == len(ANCHOR_SIZES)"
     else:
         assert len(anchor_stride) == 1, "Non-FPN should have a single ANCHOR_STRIDE"
-    anchor_generator = AnchorGenerator(
-        anchor_sizes, aspect_ratios, anchor_stride, straddle_thresh
-    )
+    anchor_generator = AnchorGenerator(anchor_sizes, aspect_ratios, anchor_stride, straddle_thresh)
     return anchor_generator
 
 
@@ -175,9 +161,7 @@ def make_anchor_generator_complex(config):
         assert len(anchor_strides) == 1, "Non-FPN should have a single ANCHOR_STRIDE"
         new_anchor_sizes = anchor_sizes
 
-    anchor_generator = AnchorGenerator(
-        tuple(new_anchor_sizes), aspect_ratios, anchor_strides, straddle_thresh
-    )
+    anchor_generator = AnchorGenerator(tuple(new_anchor_sizes), aspect_ratios, anchor_strides, straddle_thresh)
     return anchor_generator
 
 
@@ -188,15 +172,15 @@ class CenterAnchorGenerator(nn.Module):
     """
 
     def __init__(
-            self,
-            sizes=(128, 256, 512),
-            aspect_ratios=(0.5, 1.0, 2.0),
-            anchor_strides=(8, 16, 32),
-            straddle_thresh=0,
-            anchor_shift=(0.0, 0.0, 0.0, 0.0),
-            use_relative=False
+        self,
+        sizes=(128, 256, 512),
+        aspect_ratios=(0.5, 1.0, 2.0),
+        anchor_strides=(8, 16, 32),
+        straddle_thresh=0,
+        anchor_shift=(0.0, 0.0, 0.0, 0.0),
+        use_relative=False,
     ):
-        super(CenterAnchorGenerator, self).__init__()
+        super().__init__()
 
         self.sizes = sizes
         self.aspect_ratios = aspect_ratios
@@ -210,10 +194,10 @@ class CenterAnchorGenerator(nn.Module):
         anchors = boxlist.bbox
         if self.straddle_thresh >= 0:
             inds_inside = (
-                    (anchors[..., 0] >= -self.straddle_thresh)
-                    & (anchors[..., 1] >= -self.straddle_thresh)
-                    & (anchors[..., 2] < image_width + self.straddle_thresh)
-                    & (anchors[..., 3] < image_height + self.straddle_thresh)
+                (anchors[..., 0] >= -self.straddle_thresh)
+                & (anchors[..., 1] >= -self.straddle_thresh)
+                & (anchors[..., 2] < image_width + self.straddle_thresh)
+                & (anchors[..., 3] < image_height + self.straddle_thresh)
             )
         else:
             device = anchors.device
@@ -229,43 +213,41 @@ class CenterAnchorGenerator(nn.Module):
             boxlist_per_level = []
             for size, fsize in zip(self.sizes, grid_sizes):
                 for ratios in self.aspect_ratios:
-
-                    size_ratios = size*size / ratios
+                    size_ratios = size * size / ratios
                     ws = np.round(np.sqrt(size_ratios))
                     hs = np.round(ws * ratios)
 
                     anchors_per_level = torch.cat(
                         (
-                            center[:,0,None] - 0.5 * (1 + shift_left) * (ws - 1),
-                            center[:,1,None] - 0.5 * (1 + shift_top) * (hs - 1),
-                            center[:,0,None] + 0.5 * (1 + shift_right) * (ws - 1),
-                            center[:,1,None] + 0.5 * (1 + shift_down) * (hs - 1),
+                            center[:, 0, None] - 0.5 * (1 + shift_left) * (ws - 1),
+                            center[:, 1, None] - 0.5 * (1 + shift_top) * (hs - 1),
+                            center[:, 0, None] + 0.5 * (1 + shift_right) * (ws - 1),
+                            center[:, 1, None] + 0.5 * (1 + shift_down) * (hs - 1),
                         ),
-                        dim=1
+                        dim=1,
                     )
                     boxlist = BoxList(anchors_per_level, (image_width, image_height), mode="xyxy")
-                    boxlist.add_field('cbox', center_bbox)
+                    boxlist.add_field("cbox", center_bbox)
                     self.add_visibility_to(boxlist)
                     boxlist_per_level.append(boxlist)
             if self.use_relative:
                 area = center_bbox.area()
                 for ratios in self.aspect_ratios:
-
                     size_ratios = area / ratios
                     ws = torch.round(torch.sqrt(size_ratios))
                     hs = torch.round(ws * ratios)
 
                     anchors_per_level = torch.stack(
                         (
-                            center[:,0] - (1 + shift_left) * ws,
-                            center[:,1] - (1 + shift_top) * hs,
-                            center[:,0] + (1 + shift_right) * ws,
-                            center[:,1] + (1 + shift_down) * hs,
+                            center[:, 0] - (1 + shift_left) * ws,
+                            center[:, 1] - (1 + shift_top) * hs,
+                            center[:, 0] + (1 + shift_right) * ws,
+                            center[:, 1] + (1 + shift_down) * hs,
                         ),
-                        dim=1
+                        dim=1,
                     )
                     boxlist = BoxList(anchors_per_level, (image_width, image_height), mode="xyxy")
-                    boxlist.add_field('cbox', center_bbox)
+                    boxlist.add_field("cbox", center_bbox)
                     self.add_visibility_to(boxlist)
                     boxlist_per_level.append(boxlist)
             anchors_in_image = cat_boxlist(boxlist_per_level)
@@ -297,9 +279,15 @@ def make_center_anchor_generator(config):
         new_anchor_sizes = anchor_sizes
 
     anchor_generator = CenterAnchorGenerator(
-        tuple(new_anchor_sizes), aspect_ratios, anchor_strides, straddle_thresh, anchor_shift, use_relative
+        tuple(new_anchor_sizes),
+        aspect_ratios,
+        anchor_strides,
+        straddle_thresh,
+        anchor_shift,
+        use_relative,
     )
     return anchor_generator
+
 
 # Copyright (c) 2017-present, Facebook, Inc.
 #
@@ -353,9 +341,7 @@ def make_center_anchor_generator(config):
 #        [-167., -343.,  184.,  360.]])
 
 
-def generate_anchors(
-    stride=16, sizes=(32, 64, 128, 256, 512), aspect_ratios=(0.5, 1, 2)
-):
+def generate_anchors(stride=16, sizes=(32, 64, 128, 256, 512), aspect_ratios=(0.5, 1, 2)):
     """Generates a matrix of anchor boxes in (x1, y1, x2, y2) format. Anchors
     are centered on stride / 2, have (approximate) sqrt areas of the specified
     sizes, and aspect ratios as given.
@@ -373,9 +359,7 @@ def _generate_anchors(base_size, scales, aspect_ratios):
     """
     anchor = np.array([1, 1, base_size, base_size], dtype=np.float32) - 1
     anchors = _ratio_enum(anchor, aspect_ratios)
-    anchors = np.vstack(
-        [_scale_enum(anchors[i, :], scales) for i in range(anchors.shape[0])]
-    )
+    anchors = np.vstack([_scale_enum(anchors[i, :], scales) for i in range(anchors.shape[0])])
     return torch.from_numpy(anchors)
 
 

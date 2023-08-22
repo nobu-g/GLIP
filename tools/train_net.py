@@ -9,38 +9,43 @@ from maskrcnn_benchmark.utils.env import setup_environment  # noqa F401 isort:sk
 
 import argparse
 import os
+import random
 
+import numpy as np
 import torch
 from maskrcnn_benchmark.config import cfg, try_to_find
 from maskrcnn_benchmark.data import make_data_loader
-from maskrcnn_benchmark.solver import make_lr_scheduler
-from maskrcnn_benchmark.solver import make_optimizer
 from maskrcnn_benchmark.engine.inference import inference
 from maskrcnn_benchmark.engine.trainer import do_train
 from maskrcnn_benchmark.modeling.detector import build_detection_model
+from maskrcnn_benchmark.solver import make_lr_scheduler, make_optimizer
+from maskrcnn_benchmark.utils.amp import GradScaler, autocast
 from maskrcnn_benchmark.utils.checkpoint import DetectronCheckpointer
 from maskrcnn_benchmark.utils.collect_env import collect_env_info
-from maskrcnn_benchmark.utils.comm import synchronize, get_rank
+from maskrcnn_benchmark.utils.comm import get_rank, synchronize
 from maskrcnn_benchmark.utils.imports import import_file
 from maskrcnn_benchmark.utils.logger import setup_logger
-from maskrcnn_benchmark.utils.metric_logger import (MetricLogger, TensorboardLogger)
+from maskrcnn_benchmark.utils.metric_logger import MetricLogger, TensorboardLogger
 from maskrcnn_benchmark.utils.miscellaneous import mkdir, save_config
-import numpy as np
-import random
-from maskrcnn_benchmark.utils.amp import autocast, GradScaler
 
-os.environ['CUDA_LAUNCH_BLOCKING'] = '1'
+os.environ["CUDA_LAUNCH_BLOCKING"] = "1"
 
-def train(cfg, local_rank, distributed, use_tensorboard=False,):
+
+def train(
+    cfg,
+    local_rank,
+    distributed,
+    use_tensorboard=False,
+):
     model = build_detection_model(cfg)
     device = torch.device(cfg.MODEL.DEVICE)
     model.to(device)
 
     if cfg.MODEL.BACKBONE.RESET_BN:
         for name, param in model.named_buffers():
-            if 'running_mean' in name:
+            if "running_mean" in name:
                 torch.nn.init.constant_(param, 0)
-            if 'running_var' in name:
+            if "running_var" in name:
                 torch.nn.init.constant_(param, 1)
 
     if cfg.SOLVER.GRAD_CLIP > 0:
@@ -52,7 +57,7 @@ def train(cfg, local_rank, distributed, use_tensorboard=False,):
         cfg,
         is_train=True,
         is_distributed=distributed,
-        start_iter=0  # <TODO> Sample data from resume is disabled, due to the conflict with max_epoch
+        start_iter=0,  # <TODO> Sample data from resume is disabled, due to the conflict with max_epoch
     )
 
     if cfg.TEST.DURING_TRAINING or cfg.SOLVER.USE_AUTOSTEP:
@@ -76,7 +81,7 @@ def train(cfg, local_rank, distributed, use_tensorboard=False,):
     if cfg.MODEL.RPN.FREEZE:
         for p in model.rpn.parameters():
             p.requires_grad = False
-    
+
     # if cfg.SOLVER.PROMPT_PROBING_LEVEL != -1:
     #     if cfg.SOLVER.PROMPT_PROBING_LEVEL == 1:
     #         for p in model.parameters():
@@ -98,9 +103,11 @@ def train(cfg, local_rank, distributed, use_tensorboard=False,):
 
     if distributed:
         model = torch.nn.parallel.DistributedDataParallel(
-            model, device_ids=[local_rank], output_device=local_rank,
+            model,
+            device_ids=[local_rank],
+            output_device=local_rank,
             broadcast_buffers=cfg.MODEL.BACKBONE.USE_BN,
-            find_unused_parameters=cfg.SOLVER.FIND_UNUSED_PARAMETERS
+            find_unused_parameters=cfg.SOLVER.FIND_UNUSED_PARAMETERS,
         )
 
     arguments = {}
@@ -109,23 +116,17 @@ def train(cfg, local_rank, distributed, use_tensorboard=False,):
     output_dir = cfg.OUTPUT_DIR
 
     save_to_disk = get_rank() == 0
-    checkpointer = DetectronCheckpointer(
-        cfg, model, optimizer, scheduler, output_dir, save_to_disk
-    )
+    checkpointer = DetectronCheckpointer(cfg, model, optimizer, scheduler, output_dir, save_to_disk)
     extra_checkpoint_data = checkpointer.load(try_to_find(cfg.MODEL.WEIGHT))
     arguments.update(extra_checkpoint_data)
 
     checkpoint_period = cfg.SOLVER.CHECKPOINT_PERIOD
 
     if use_tensorboard:
-        meters = TensorboardLogger(
-            log_dir=cfg.OUTPUT_DIR,
-            start_iter=arguments["iteration"],
-            delimiter="  "
-        )
+        meters = TensorboardLogger(log_dir=cfg.OUTPUT_DIR, start_iter=arguments["iteration"], delimiter="  ")
     else:
         meters = MetricLogger(delimiter="  ")
-    
+
     do_train(
         cfg,
         model,
@@ -137,10 +138,11 @@ def train(cfg, local_rank, distributed, use_tensorboard=False,):
         checkpoint_period,
         arguments,
         data_loaders_val,
-        meters
+        meters,
     )
 
     return model
+
 
 def setup_for_distributed(is_master):
     """
@@ -156,6 +158,8 @@ def setup_for_distributed(is_master):
             builtin_print(*args, **kwargs)
 
     __builtin__.print = print
+
+
 def main():
     parser = argparse.ArgumentParser(description="PyTorch Object Detection Training")
     parser.add_argument(
@@ -173,12 +177,13 @@ def main():
         action="store_true",
     )
 
-    parser.add_argument("--use-tensorboard",
-                        dest="use_tensorboard",
-                        help="Use tensorboardX logger (Requires tensorboardX installed)",
-                        action="store_true",
-                        default=False
-                        )
+    parser.add_argument(
+        "--use-tensorboard",
+        dest="use_tensorboard",
+        help="Use tensorboardX logger (Requires tensorboardX installed)",
+        action="store_true",
+        default=False,
+    )
 
     parser.add_argument(
         "opts",
@@ -198,12 +203,10 @@ def main():
 
     if args.distributed:
         import datetime
+
         torch.cuda.set_device(args.local_rank)
-        torch.distributed.init_process_group(
-            backend="nccl", init_method="env://",
-            timeout=datetime.timedelta(0, 7200)
-        )
-    
+        torch.distributed.init_process_group(backend="nccl", init_method="env://", timeout=datetime.timedelta(0, 7200))
+
     if args.disable_output_distributed:
         setup_for_distributed(args.local_rank <= 0)
 
@@ -228,27 +231,30 @@ def main():
 
     logger = setup_logger("maskrcnn_benchmark", output_dir, get_rank())
     logger.info(args)
-    logger.info("Using {} GPUs".format(num_gpus))
+    logger.info(f"Using {num_gpus} GPUs")
 
-    logger.info("Loaded configuration file {}".format(args.config_file))
-    with open(args.config_file, "r") as cf:
+    logger.info(f"Loaded configuration file {args.config_file}")
+    with open(args.config_file) as cf:
         config_str = "\n" + cf.read()
         logger.info(config_str)
-    logger.info("Running with config:\n{}".format(cfg))
+    logger.info(f"Running with config:\n{cfg}")
 
-    output_config_path = os.path.join(cfg.OUTPUT_DIR, 'config.yml')
-    logger.info("Saving config into: {}".format(output_config_path))
+    output_config_path = os.path.join(cfg.OUTPUT_DIR, "config.yml")
+    logger.info(f"Saving config into: {output_config_path}")
     # save overloaded model config in the output directory
     if args.save_original_config:
         import shutil
-        shutil.copy(args.config_file, os.path.join(cfg.OUTPUT_DIR, 'config_original.yml'))
-    
+
+        shutil.copy(args.config_file, os.path.join(cfg.OUTPUT_DIR, "config_original.yml"))
+
     save_config(cfg, output_config_path)
 
-    model = train(cfg=cfg,
-                  local_rank=args.local_rank,
-                  distributed=args.distributed,
-                  use_tensorboard=args.use_tensorboard)
+    model = train(
+        cfg=cfg,
+        local_rank=args.local_rank,
+        distributed=args.distributed,
+        use_tensorboard=args.use_tensorboard,
+    )
 
 
 if __name__ == "__main__":

@@ -1,14 +1,13 @@
 # Copyright (c) Facebook, Inc. and its affiliates. All Rights Reserved.
 import torch
 import torch.nn.functional as F
-from torch import nn
-
 from maskrcnn_benchmark.layers import ROIAlign, ROIAlignV2
+from torch import nn
 
 from .utils import cat
 
 
-class LevelMapper(object):
+class LevelMapper:
     """Determine which FPN level each RoI in a set of RoIs should map to based
     on the heuristic in the FPN paper.
     """
@@ -59,17 +58,13 @@ class Pooler(nn.Module):
             scales (list[float]): scales for each Pooler
             sampling_ratio (int): sampling ratio for ROIAlign
         """
-        super(Pooler, self).__init__()
+        super().__init__()
         poolers = []
         for scale in scales:
             poolers.append(
-                    ROIAlignV2(
-                        output_size, spatial_scale=scale, sampling_ratio=sampling_ratio
-                    )
-                    if use_v2 else
-                    ROIAlign(
-                        output_size, spatial_scale=scale, sampling_ratio=sampling_ratio
-                    )
+                ROIAlignV2(output_size, spatial_scale=scale, sampling_ratio=sampling_ratio)
+                if use_v2
+                else ROIAlign(output_size, spatial_scale=scale, sampling_ratio=sampling_ratio)
             )
         self.poolers = nn.ModuleList(poolers)
         self.output_size = output_size
@@ -83,10 +78,7 @@ class Pooler(nn.Module):
         concat_boxes = cat([b.bbox for b in boxes], dim=0)
         device, dtype = concat_boxes.device, concat_boxes.dtype
         ids = cat(
-            [
-                torch.full((len(b), 1), i, dtype=dtype, device=device)
-                for i, b in enumerate(boxes)
-            ],
+            [torch.full((len(b), 1), i, dtype=dtype, device=device) for i, b in enumerate(boxes)],
             dim=0,
         )
         rois = torch.cat([ids, concat_boxes], dim=1)

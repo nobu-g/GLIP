@@ -1,18 +1,16 @@
 # Copyright (c) Facebook, Inc. and its affiliates. All Rights Reserved.
 import torch
-from torch.nn import functional as F
-
 from maskrcnn_benchmark.layers import smooth_l1_loss
+from maskrcnn_benchmark.modeling.balanced_positive_negative_sampler import BalancedPositiveNegativeSampler
 from maskrcnn_benchmark.modeling.box_coder import BoxCoder
 from maskrcnn_benchmark.modeling.matcher import Matcher
-from maskrcnn_benchmark.structures.boxlist_ops import boxlist_iou
-from maskrcnn_benchmark.modeling.balanced_positive_negative_sampler import (
-    BalancedPositiveNegativeSampler
-)
 from maskrcnn_benchmark.modeling.utils import cat
-from maskrcnn_benchmark.utils.amp import custom_fwd, custom_bwd
+from maskrcnn_benchmark.structures.boxlist_ops import boxlist_iou
+from maskrcnn_benchmark.utils.amp import custom_bwd, custom_fwd
+from torch.nn import functional as F
 
-class FastRCNNLossComputation(object):
+
+class FastRCNNLossComputation:
     """
     Computes the loss for Faster R-CNN.
     Also supports FPN
@@ -42,11 +40,11 @@ class FastRCNNLossComputation(object):
         if len(target):
             matched_targets = target[matched_idxs.clamp(min=0)]
         else:
-            device = target.get_field('labels').device
-            dtype = target.get_field('labels').dtype
+            device = target.get_field("labels").device
+            dtype = target.get_field("labels").dtype
             labels = torch.zeros_like(matched_idxs, dtype=dtype, device=device)
             matched_targets = target
-            matched_targets.add_field('labels', labels)
+            matched_targets.add_field("labels", labels)
 
         matched_targets.add_field("matched_idxs", matched_idxs)
         return matched_targets
@@ -55,9 +53,7 @@ class FastRCNNLossComputation(object):
         labels = []
         regression_targets = []
         for proposals_per_image, targets_per_image in zip(proposals, targets):
-            matched_targets = self.match_targets_to_proposals(
-                proposals_per_image, targets_per_image
-            )
+            matched_targets = self.match_targets_to_proposals(proposals_per_image, targets_per_image)
             matched_idxs = matched_targets.get_field("matched_idxs")
 
             labels_per_image = matched_targets.get_field("labels")
@@ -103,15 +99,11 @@ class FastRCNNLossComputation(object):
             labels, regression_targets, proposals
         ):
             proposals_per_image.add_field("labels", labels_per_image)
-            proposals_per_image.add_field(
-                "regression_targets", regression_targets_per_image
-            )
+            proposals_per_image.add_field("regression_targets", regression_targets_per_image)
 
         # distributed sampled proposals, that were obtained on all feature maps
         # concatenated via the fg_bg_sampler, into individual feature map levels
-        for img_idx, (pos_inds_img, neg_inds_img) in enumerate(
-            zip(sampled_pos_inds, sampled_neg_inds)
-        ):
+        for img_idx, (pos_inds_img, neg_inds_img) in enumerate(zip(sampled_pos_inds, sampled_neg_inds)):
             img_sampled_inds = torch.nonzero(pos_inds_img | neg_inds_img).squeeze(1)
             proposals_per_image = proposals[img_idx][img_sampled_inds]
             proposals[img_idx] = proposals_per_image
@@ -144,9 +136,7 @@ class FastRCNNLossComputation(object):
         proposals = self._proposals
 
         labels = cat([proposal.get_field("labels") for proposal in proposals], dim=0)
-        regression_targets = cat(
-            [proposal.get_field("regression_targets") for proposal in proposals], dim=0
-        )
+        regression_targets = cat([proposal.get_field("regression_targets") for proposal in proposals], dim=0)
 
         classification_loss = F.cross_entropy(class_logits, labels)
 

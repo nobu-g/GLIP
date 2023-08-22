@@ -1,31 +1,30 @@
 import math
-from typing import TypeVar, Optional, Iterator
-
-import torch
-from torch.utils.data import Sampler, Dataset
-import torch.distributed as dist
 import random
+from typing import Iterator, Optional, TypeVar
+
 import numpy as np
+import torch
+import torch.distributed as dist
+from torch.utils.data import Dataset, Sampler
 
 
 def create_duplicate_dataset(DatasetBaseClass):
     class DupDataset(DatasetBaseClass):
-
         def __init__(self, copy, **kwargs):
-            super(DupDataset, self).__init__(**kwargs)
+            super().__init__(**kwargs)
 
             self.copy = copy
-            self.length = super(DupDataset, self).__len__()
+            self.length = super().__len__()
 
         def __len__(self):
             return self.copy * self.length
 
         def __getitem__(self, index):
             true_index = index % self.length
-            return super(DupDataset, self).__getitem__(true_index)
+            return super().__getitem__(true_index)
 
         def get_img_info(self, index):
             true_index = index % self.length
-            return super(DupDataset, self).get_img_info(true_index)
+            return super().get_img_info(true_index)
 
     return DupDataset

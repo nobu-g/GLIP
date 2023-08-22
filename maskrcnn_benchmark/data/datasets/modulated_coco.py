@@ -1,50 +1,56 @@
+import json
 import logging
+import math
 import os
 import os.path
-import math
-from PIL import Image, ImageDraw
-
+import pdb
 import random
+
 import numpy as np
-
 import torch
-import torchvision
 import torch.utils.data as data
-from pycocotools import mask as coco_mask
-
+import torchvision
+from maskrcnn_benchmark.data.datasets.coco import has_valid_annotation
 from maskrcnn_benchmark.structures.bounding_box import BoxList
 from maskrcnn_benchmark.structures.segmentation_mask import SegmentationMask
-from maskrcnn_benchmark.data.datasets.coco import has_valid_annotation
-from .od_to_grounding import convert_od_to_grounding_simple, check_for_positive_overflow, sanity_check_target_after_processing, convert_object_detection_to_grounding_optimized_for_od
-import pdb
-import json
+from PIL import Image, ImageDraw
+from pycocotools import mask as coco_mask
+
+from .od_to_grounding import (
+    check_for_positive_overflow,
+    convert_object_detection_to_grounding_optimized_for_od,
+    convert_od_to_grounding_simple,
+    sanity_check_target_after_processing,
+)
+
 
 class CocoGrounding(torchvision.datasets.CocoDetection):
-    def __init__(self,
-                 img_folder,
-                 ann_file,
-                 transforms,
-                 return_masks,
-                 return_tokens,
-                 is_train=False,
-                 tokenizer=None,
-                 disable_shuffle=False,
-                 add_detection_prompt=False,
-                 one_hot=False,
-                 disable_clip_to_image=False,
-                 no_minus_one_for_one_hot=False,
-                 separation_tokens=" ",
-                 few_shot=0,
-                 no_mask_for_od=False,
-                 override_category=None,
-                 use_caption_prompt=False,
-                 caption_prompt=None,
-                 max_query_len=256,
-                 special_safeguard_for_coco_grounding=False,
-                 random_sample_negative=-1,
-                 **kwargs
-                 ):
-        super(CocoGrounding, self).__init__(img_folder, ann_file)
+    def __init__(
+        self,
+        img_folder,
+        ann_file,
+        transforms,
+        return_masks,
+        return_tokens,
+        is_train=False,
+        tokenizer=None,
+        disable_shuffle=False,
+        add_detection_prompt=False,
+        one_hot=False,
+        disable_clip_to_image=False,
+        no_minus_one_for_one_hot=False,
+        separation_tokens=" ",
+        few_shot=0,
+        no_mask_for_od=False,
+        override_category=None,
+        use_caption_prompt=False,
+        caption_prompt=None,
+        max_query_len=256,
+        special_safeguard_for_coco_grounding=False,
+        random_sample_negative=-1,
+        **kwargs,
+    ):
+        super().__init__(img_folder, ann_file)
         self.ids = sorted(self.ids)
 
         ids = []
@@ -58,34 +64,28 @@ class CocoGrounding(torchvision.datasets.CocoDetection):
                 ids.append(img_id)
 
         self.ids = ids
-        
+
         if few_shot:
             ids = []
             # cats_freq = [few_shot]*len(self.coco.cats.keys())
-            cats_freq = [few_shot]*max(list(self.coco.cats.keys()))
+            cats_freq = [few_shot] * max(list(self.coco.cats.keys()))
             for img_id in self.ids:
                 if isinstance(img_id, str):
                     ann_ids = self.coco.getAnnIds(imgIds=[img_id], iscrowd=None)
                 else:
                     ann_ids = self.coco.getAnnIds(imgIds=img_id, iscrowd=None)
                 anno = self.coco.loadAnns(ann_ids)
-                cat = set([ann['category_id'] for ann in anno]) #set/tuple corresponde to instance/image level
-                is_needed = sum([cats_freq[c-1]>0 for c in cat])
+                cat = {ann["category_id"] for ann in anno}  # set/tuple corresponde to instance/image level
+                is_needed = sum([cats_freq[c - 1] > 0 for c in cat])
                 if is_needed:
                     ids.append(img_id)
                     for c in cat:
-                        cats_freq[c-1] -= 1
+                        cats_freq[c - 1] -= 1
                     # print(cat, cats_freq)
             self.ids = ids
 
-
-
-        self.json_category_id_to_contiguous_id = {
-            v: i + 1 for i, v in enumerate(self.coco.getCatIds())
-        }
-        self.contiguous_category_id_to_json_id = {
-            v: k for k, v in self.json_category_id_to_contiguous_id.items()
-        }
+        self.json_category_id_to_contiguous_id = {v: i + 1 for i, v in enumerate(self.coco.getCatIds())}
+        self.contiguous_category_id_to_json_id = {v: k for k, v in self.json_category_id_to_contiguous_id.items()}
 
         if override_category is not None:
             self.coco.dataset["categories"] = override_category
@@ -118,17 +118,17 @@ class CocoGrounding(torchvision.datasets.CocoDetection):
         label_list = {}
         for index, i in enumerate(categories):
             # assert(index + 1 == i["id"])
-            if not no_background or (i["name"] != "__background__" and i['id'] != 0):
+            if not no_background or (i["name"] != "__background__" and i["id"] != 0):
                 label_list[self.json_category_id_to_contiguous_id[i["id"]]] = i["name"]
         return label_list
 
     def get_box_mask(self, rect, img_size, mode="poly"):
-        assert mode=="poly", "Only support poly mask right now!"
+        assert mode == "poly", "Only support poly mask right now!"
         x1, y1, x2, y2 = rect[0], rect[1], rect[2], rect[3]
         return [[x1, y1, x1, y2, x2, y2, x2, y1]]
 
     def __getitem__(self, idx):
-        img, tgt = super(CocoGrounding, self).__getitem__(idx)
+        img, tgt = super().__getitem__(idx)
         image_id = self.ids[idx]
         tgt = [obj for obj in tgt if obj["iscrowd"] == 0]
         boxes = [obj["bbox"] for obj in tgt]
@@ -153,20 +153,27 @@ class CocoGrounding(torchvision.datasets.CocoDetection):
             is_box_mask = torch.tensor(is_box_mask)
             target.add_field("masks", masks)
             target.add_field("is_box_mask", is_box_mask)
-        
+
         if not self.disable_clip_to_image:
             target = target.clip_to_image(remove_empty=True)
-        
+
         if self.special_safeguard_for_coco_grounding:
             # Intended for LVIS
-            assert(not self.use_caption_prompt)
+            assert not self.use_caption_prompt
 
             original_box_num = len(target)
-            target, positive_caption_length = check_for_positive_overflow(target, self.ind_to_class, self.tokenizer, self.max_query_len-2) # leave some space for the special tokens
+            target, positive_caption_length = check_for_positive_overflow(
+                target, self.ind_to_class, self.tokenizer, self.max_query_len - 2
+            )  # leave some space for the special tokens
             if len(target) < original_box_num:
-                print("WARNING: removed {} boxes due to positive caption overflow".format(original_box_num - len(target)))
+                print(f"WARNING: removed {original_box_num - len(target)} boxes due to positive caption overflow")
 
-            annotations, caption, greenlight_span_for_masked_lm_objective, label_to_positions = convert_object_detection_to_grounding_optimized_for_od(
+            (
+                annotations,
+                caption,
+                greenlight_span_for_masked_lm_objective,
+                label_to_positions,
+            ) = convert_object_detection_to_grounding_optimized_for_od(
                 target=target,
                 image_id=image_id,
                 ind_to_class=self.ind_to_class,
@@ -174,17 +181,26 @@ class CocoGrounding(torchvision.datasets.CocoDetection):
                 add_detection_prompt=False,
                 add_detection_prompt_advanced=False,
                 random_sample_negative=self.random_sample_negative,
-                control_probabilities=(0.0, 0.0, 1.0, 0.0), # always try to add a lot of negatives
+                control_probabilities=(
+                    0.0,
+                    0.0,
+                    1.0,
+                    0.0,
+                ),  # always try to add a lot of negatives
                 restricted_negative_list=None,
                 separation_tokens=self.separation_tokens,
                 max_num_labels=-1,
                 positive_caption_length=positive_caption_length,
                 tokenizer=self.tokenizer,
-                max_seq_length=self.max_query_len-2
+                max_seq_length=self.max_query_len - 2,
             )
         else:
             # Intended for COCO / ODinW
-            annotations, caption, greenlight_span_for_masked_lm_objective = convert_od_to_grounding_simple(
+            (
+                annotations,
+                caption,
+                greenlight_span_for_masked_lm_objective,
+            ) = convert_od_to_grounding_simple(
                 target=target,
                 image_id=image_id,
                 ind_to_class=self.ind_to_class,
@@ -214,7 +230,7 @@ class CocoGrounding(torchvision.datasets.CocoDetection):
             if self.no_minus_one_for_one_hot:
                 text_mask[:] = 1
             else:
-                text_mask[:len(self.ind_to_class)] = 1
+                text_mask[: len(self.ind_to_class)] = 1
             anno["positive_map"] = one_hot_map
             anno["text_mask"] = text_mask
 
@@ -224,7 +240,7 @@ class CocoGrounding(torchvision.datasets.CocoDetection):
         # add additional property
         for ann in anno:
             target.add_field(ann, anno[ann])
-        
+
         sanity_check_target_after_processing(target)
 
         return img, target, idx
@@ -236,19 +252,21 @@ class CocoGrounding(torchvision.datasets.CocoDetection):
 
 
 class ModulatedDataset(torchvision.datasets.CocoDetection):
-    def __init__(self,
-                 img_folder,
-                 ann_file,
-                 transforms,
-                 return_masks,
-                 return_tokens,
-                 is_train=False,
-                 tokenizer=None,
-                 disable_clip_to_image=False,
-                 no_mask_for_gold=False,
-                 max_query_len=256,
-                 **kwargs):
-        super(ModulatedDataset, self).__init__(img_folder, ann_file)
+    def __init__(
+        self,
+        img_folder,
+        ann_file,
+        transforms,
+        return_masks,
+        return_tokens,
+        is_train=False,
+        tokenizer=None,
+        disable_clip_to_image=False,
+        no_mask_for_gold=False,
+        max_query_len=256,
+        **kwargs,
+    ):
+        super().__init__(img_folder, ann_file)
         self.ids = sorted(self.ids)
 
         ids = []
@@ -265,13 +283,18 @@ class ModulatedDataset(torchvision.datasets.CocoDetection):
         self.id_to_img_map = {k: v for k, v in enumerate(self.ids)}
         self._transforms = transforms
         self.max_query_len = max_query_len
-        self.prepare = ConvertCocoPolysToMask(return_masks, return_tokens, tokenizer=tokenizer, max_query_len=max_query_len)
+        self.prepare = ConvertCocoPolysToMask(
+            return_masks,
+            return_tokens,
+            tokenizer=tokenizer,
+            max_query_len=max_query_len,
+        )
         self.is_train = is_train
         self.disable_clip_to_image = disable_clip_to_image
         self.no_mask_for_gold = no_mask_for_gold
 
     def __getitem__(self, idx):
-        img, target = super(ModulatedDataset, self).__getitem__(idx)
+        img, target = super().__getitem__(idx)
         image_id = self.ids[idx]
         coco_img = self.coco.loadImgs(image_id)[0]
         caption = coco_img["caption"]
@@ -318,7 +341,10 @@ class ModulatedDataset(torchvision.datasets.CocoDetection):
 
         if "tokens_positive_eval" in coco_img and not self.is_train:
             tokenized = self.prepare.tokenizer(caption, return_tensors="pt")
-            target.add_field("positive_map_eval", create_positive_map(tokenized, coco_img["tokens_positive_eval"]))
+            target.add_field(
+                "positive_map_eval",
+                create_positive_map(tokenized, coco_img["tokens_positive_eval"]),
+            )
             target.add_field("nb_eval", len(target.get_field("positive_map_eval")))
 
         sanity_check_target_after_processing(target)
@@ -344,6 +370,7 @@ class CocoDetection(data.Dataset):
 
     def __init__(self, root, annFile, transform=None, target_transform=None):
         from pycocotools.coco import COCO
+
         self.root = root
         self.coco = COCO(annFile)
         self.ids = list(self.coco.imgs.keys())
@@ -366,7 +393,7 @@ class CocoDetection(data.Dataset):
         target = coco.loadAnns(ann_ids)
 
         meta = coco.loadImgs(img_id)[0]
-        path = meta['file_name']
+        path = meta["file_name"]
         img = pil_loader(os.path.join(self.root, path))
 
         if self.transform is not None:
@@ -384,17 +411,17 @@ class CocoDetection(data.Dataset):
         return len(self.ids)
 
     def __repr__(self):
-        fmt_str = 'Dataset ' + self.__class__.__name__ + '\n'
-        fmt_str += '    Number of datapoints: {}\n'.format(self.__len__())
-        fmt_str += '    Root Location: {}\n'.format(self.root)
-        tmp = '    Transforms (if any): '
-        fmt_str += '{0}{1}\n'.format(tmp, self.transform.__repr__().replace('\n', '\n' + ' ' * len(tmp)))
-        tmp = '    Target Transforms (if any): '
-        fmt_str += '{0}{1}'.format(tmp, self.target_transform.__repr__().replace('\n', '\n' + ' ' * len(tmp)))
+        fmt_str = "Dataset " + self.__class__.__name__ + "\n"
+        fmt_str += f"    Number of datapoints: {self.__len__()}\n"
+        fmt_str += f"    Root Location: {self.root}\n"
+        tmp = "    Transforms (if any): "
+        fmt_str += "{}{}\n".format(tmp, self.transform.__repr__().replace("\n", "\n" + " " * len(tmp)))
+        tmp = "    Target Transforms (if any): "
+        fmt_str += "{}{}".format(tmp, self.target_transform.__repr__().replace("\n", "\n" + " " * len(tmp)))
         return fmt_str
 
 
-class ConvertCocoPolysToMask(object):
+class ConvertCocoPolysToMask:
     def __init__(self, return_masks=False, return_tokens=False, tokenizer=None, max_query_len=256):
         self.return_masks = return_masks
         self.return_tokens = return_tokens
@@ -402,7 +429,7 @@ class ConvertCocoPolysToMask(object):
         self.max_query_len = max_query_len
 
     def get_box_mask(self, rect, img_size, mode="poly"):
-        assert mode=="poly", "Only support poly mask right now!"
+        assert mode == "poly", "Only support poly mask right now!"
         x1, y1, x2, y2 = rect[0], rect[1], rect[2], rect[3]
         return [[x1, y1, x1, y2, x2, y2, x2, y1]]
 
@@ -425,8 +452,8 @@ class ConvertCocoPolysToMask(object):
         boxes = torch.as_tensor(boxes, dtype=torch.float32).reshape(-1, 4)
         if box_format == "xywh":
             boxes[:, 2:] += boxes[:, :2] - 1  # TO_REMOVE = 1
-            boxes[:, 0::2].clamp_(min=0, max=w-1)  # TO_REMOVE = 1
-            boxes[:, 1::2].clamp_(min=0, max=h-1)  # TO_REMOVE = 1
+            boxes[:, 0::2].clamp_(min=0, max=w - 1)  # TO_REMOVE = 1
+            boxes[:, 1::2].clamp_(min=0, max=h - 1)  # TO_REMOVE = 1
 
         classes = [obj["category_id"] for obj in anno]
         classes = torch.tensor(classes, dtype=torch.int64)
@@ -439,9 +466,9 @@ class ConvertCocoPolysToMask(object):
                     masks.append(obj["segmentation"])
                     is_box_mask.append(0)
                 else:
-                    masks.append(self.get_box_mask(bbox, image.size, mode='poly'))
+                    masks.append(self.get_box_mask(bbox, image.size, mode="poly"))
                     is_box_mask.append(1)
-            masks = SegmentationMask(masks, image.size, mode='poly')
+            masks = SegmentationMask(masks, image.size, mode="poly")
             is_box_mask = torch.tensor(is_box_mask)
 
         keypoints = None
@@ -505,20 +532,25 @@ class ConvertCocoPolysToMask(object):
         if self.return_tokens and self.tokenizer is not None:
             if not ignore_box_screen:
                 assert len(target["boxes"]) == len(target["tokens_positive"])
-            tokenized = self.tokenizer(caption, return_tensors="pt",
+            tokenized = self.tokenizer(
+                caption,
+                return_tensors="pt",
                 max_length=self.max_query_len,
-                truncation=True)
+                truncation=True,
+            )
             target["positive_map"] = create_positive_map(tokenized, target["tokens_positive"])
-            target['greenlight_map'] = create_greenlight_map(greenlight_span_for_masked_lm_objective,tokenized)
+            target["greenlight_map"] = create_greenlight_map(greenlight_span_for_masked_lm_objective, tokenized)
             target["positive_map_for_od_labels"] = create_positive_map_for_od_labels(tokenized, label_to_positions)
 
         original_od_label = []
         for obj in anno:
             original_od_label.append(
-                obj.get("original_od_label", -10))  # NOTE: The padding value has to be not the same as -1 or -100
+                obj.get("original_od_label", -10)
+            )  # NOTE: The padding value has to be not the same as -1 or -100
         target["original_od_label"] = torch.as_tensor(original_od_label)
 
         return image, target
+
 
 def create_greenlight_map(tok_list, tokenized):
     # An example tok_list:
@@ -528,7 +560,7 @@ def create_greenlight_map(tok_list, tokenized):
     greenlight_map = torch.zeros(256, dtype=torch.float)
     for item in tok_list:
         if len(item) != 2:
-            assert(len(item) == 3)
+            assert len(item) == 3
             # Make everything unmakable
             greenlight_map[:] = -1
             break
@@ -554,7 +586,7 @@ def create_greenlight_map(tok_list, tokenized):
             continue
 
         assert beg_pos is not None and end_pos is not None
-        greenlight_map[beg_pos: end_pos + 1].fill_(1)
+        greenlight_map[beg_pos : end_pos + 1].fill_(1)
     return greenlight_map
 
 
@@ -591,7 +623,7 @@ def create_positive_map_for_od_labels(tokenized, label_to_positions):
         if beg_pos is None or end_pos is None:
             continue
         assert beg_pos is not None and end_pos is not None
-        positive_map[beg_pos: end_pos + 1].fill_(key)
+        positive_map[beg_pos : end_pos + 1].fill_(key)
     return positive_map
 
 
@@ -617,7 +649,7 @@ def create_positive_map(tokenized, tokens_positive):
     positive_map = torch.zeros((len(tokens_positive), 256), dtype=torch.float)
 
     for j, tok_list in enumerate(tokens_positive):
-        for (beg, end) in tok_list:
+        for beg, end in tok_list:
             beg_pos = tokenized.char_to_token(beg)
             end_pos = tokenized.char_to_token(end - 1)
             if beg_pos is None:
@@ -638,7 +670,7 @@ def create_positive_map(tokenized, tokens_positive):
                 continue
 
             assert beg_pos is not None and end_pos is not None
-            positive_map[j, beg_pos: end_pos + 1].fill_(1)
+            positive_map[j, beg_pos : end_pos + 1].fill_(1)
     return positive_map / (positive_map.sum(-1)[:, None] + 1e-6)
 
 
@@ -647,8 +679,8 @@ def pil_loader(path, retry=5):
     ri = 0
     while ri < retry:
         try:
-            with open(path, 'rb') as f:
+            with open(path, "rb") as f:
                 img = Image.open(f)
-                return img.convert('RGB')
+                return img.convert("RGB")
         except:
             ri += 1

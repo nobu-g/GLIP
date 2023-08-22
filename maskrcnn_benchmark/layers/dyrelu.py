@@ -2,6 +2,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
+
 def _make_divisible(v, divisor, min_value=None):
     if min_value is None:
         min_value = divisor
@@ -19,7 +20,7 @@ class swish(nn.Module):
 
 class h_swish(nn.Module):
     def __init__(self, inplace=False):
-        super(h_swish, self).__init__()
+        super().__init__()
         self.inplace = inplace
 
     def forward(self, x):
@@ -28,7 +29,7 @@ class h_swish(nn.Module):
 
 class h_sigmoid(nn.Module):
     def __init__(self, inplace=True, h_max=1):
-        super(h_sigmoid, self).__init__()
+        super().__init__()
         self.relu = nn.ReLU6(inplace=inplace)
         self.h_max = h_max
 
@@ -37,9 +38,19 @@ class h_sigmoid(nn.Module):
 
 
 class DYReLU(nn.Module):
-    def __init__(self, inp, oup, reduction=4, lambda_a=1.0, K2=True, use_bias=True, use_spatial=False,
-                 init_a=[1.0, 0.0], init_b=[0.0, 0.0]):
-        super(DYReLU, self).__init__()
+    def __init__(
+        self,
+        inp,
+        oup,
+        reduction=4,
+        lambda_a=1.0,
+        K2=True,
+        use_bias=True,
+        use_spatial=False,
+        init_a=[1.0, 0.0],
+        init_b=[0.0, 0.0],
+    ):
+        super().__init__()
         self.oup = oup
         self.lambda_a = lambda_a * 2
         self.K2 = K2
@@ -65,7 +76,7 @@ class DYReLU(nn.Module):
             nn.Linear(inp, squeeze),
             nn.ReLU(inplace=True),
             nn.Linear(squeeze, oup * self.exp),
-            h_sigmoid()
+            h_sigmoid(),
         )
         if use_spatial:
             self.spa = nn.Sequential(
@@ -114,7 +125,7 @@ class DYReLU(nn.Module):
         if self.spa:
             ys = self.spa(x_in).view(b, -1)
             ys = F.softmax(ys, dim=1).view(b, 1, h, w) * h * w
-            ys = F.hardtanh(ys, 0, 3, inplace=True)/3
+            ys = F.hardtanh(ys, 0, 3, inplace=True) / 3
             out = out * ys
 
         return out

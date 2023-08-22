@@ -1,21 +1,27 @@
 import math
+
 import torch
 import torch.nn.functional as F
+from maskrcnn_benchmark.layers import (
+    DYReLU,
+    FrozenBatchNorm2d,
+    ModulatedDeformConv,
+    NaiveSyncBatchNorm2d,
+    Scale,
+    SELayer,
+)
+from maskrcnn_benchmark.modeling.backbone.fbnet import *
+from maskrcnn_benchmark.structures.boxlist_ops import cat_boxlist
 from torch import nn
 
+from .anchor_generator import make_anchor_generator_complex
 from .inference import make_atss_postprocessor
 from .loss import make_atss_loss_evaluator
-from .anchor_generator import make_anchor_generator_complex
-
-from maskrcnn_benchmark.structures.boxlist_ops import cat_boxlist
-from maskrcnn_benchmark.layers import Scale, DYReLU, SELayer, ModulatedDeformConv
-from maskrcnn_benchmark.layers import NaiveSyncBatchNorm2d, FrozenBatchNorm2d
-from maskrcnn_benchmark.modeling.backbone.fbnet import *
 
 
 class h_sigmoid(nn.Module):
     def __init__(self, inplace=True, h_max=1):
-        super(h_sigmoid, self).__init__()
+        super().__init__()
         self.relu = nn.ReLU6(inplace=inplace)
         self.h_max = h_max
 
@@ -23,8 +29,7 @@ class h_sigmoid(nn.Module):
         return self.relu(x + 3) * self.h_max / 6
 
 
-class BoxCoder(object):
-
+class BoxCoder:
     def __init__(self, cfg):
         self.cfg = cfg
 
@@ -40,7 +45,7 @@ class BoxCoder(object):
         gt_ctr_x = (gt_boxes[:, 2] + gt_boxes[:, 0]) / 2
         gt_ctr_y = (gt_boxes[:, 3] + gt_boxes[:, 1]) / 2
 
-        wx, wy, ww, wh = (10., 10., 5., 5.)
+        wx, wy, ww, wh = (10.0, 10.0, 5.0, 5.0)
         targets_dx = wx * (gt_ctr_x - ex_ctr_x) / ex_widths
         targets_dy = wy * (gt_ctr_y - ex_ctr_y) / ex_heights
         targets_dw = ww * torch.log(gt_widths / ex_widths)
@@ -58,15 +63,15 @@ class BoxCoder(object):
         ctr_x = (anchors[:, 2] + anchors[:, 0]) / 2
         ctr_y = (anchors[:, 3] + anchors[:, 1]) / 2
 
-        wx, wy, ww, wh = (10., 10., 5., 5.)
+        wx, wy, ww, wh = (10.0, 10.0, 5.0, 5.0)
         dx = preds[:, 0::4] / wx
         dy = preds[:, 1::4] / wy
         dw = preds[:, 2::4] / ww
         dh = preds[:, 3::4] / wh
 
         # Prevent sending too large values into torch.exp()
-        dw = torch.clamp(dw, max=math.log(1000. / 16))
-        dh = torch.clamp(dh, max=math.log(1000. / 16))
+        dw = torch.clamp(dw, max=math.log(1000.0 / 16))
+        dh = torch.clamp(dh, max=math.log(1000.0 / 16))
 
         pred_ctr_x = dx * widths[:, None] + ctr_x[:, None]
         pred_ctr_y = dy * heights[:, None] + ctr_y[:, None]
@@ -83,20 +88,35 @@ class BoxCoder(object):
 
 
 class Conv3x3Norm(torch.nn.Module):
-    def __init__(self,
-                 in_channels,
-                 out_channels,
-                 stride,
-                 groups=1,
-                 deformable=False,
-                 bn_type=None):
-        super(Conv3x3Norm, self).__init__()
+    def __init__(
+        self,
+        in_channels,
+        out_channels,
+        stride,
+        groups=1,
+        deformable=False,
+        bn_type=None,
+    ):
+        super().__init__()
 
         if deformable:
-            self.conv = ModulatedDeformConv(in_channels, out_channels, kernel_size=3, stride=stride, padding=1,
-                                            groups=groups)
+            self.conv = ModulatedDeformConv(
+                in_channels,
+                out_channels,
+                kernel_size=3,
+                stride=stride,
+                padding=1,
+                groups=groups,
+            )
         else:
-            self.conv = nn.Conv2d(in_channels, out_channels, kernel_size=3, stride=stride, padding=1, groups=groups)
+            self.conv = nn.Conv2d(
+                in_channels,
+                out_channels,
+                kernel_size=3,
+                stride=stride,
+                padding=1,
+                groups=groups,
+            )
 
         if isinstance(bn_type, (list, tuple)):
             assert len(bn_type) == 2
@@ -127,15 +147,16 @@ class Conv3x3Norm(torch.nn.Module):
 
 
 class DyConv(torch.nn.Module):
-    def __init__(self,
-                 in_channels=256,
-                 out_channels=256,
-                 conv_func=nn.Conv2d,
-                 use_dyfuse=True,
-                 use_dyrelu=False,
-                 use_deform=False
-                 ):
-        super(DyConv, self).__init__()
+    def __init__(
+        self,
+        in_channels=256,
+        out_channels=256,
+        conv_func=nn.Conv2d,
+        use_dyfuse=True,
+        use_dyrelu=False,
+        use_deform=False,
+    ):
+        super().__init__()
 
         self.DyConv = nn.ModuleList()
         self.DyConv.append(conv_func(in_channels, out_channels, 1))
@@ -146,7 +167,8 @@ class DyConv(torch.nn.Module):
             self.AttnConv = nn.Sequential(
                 nn.AdaptiveAvgPool2d(1),
                 nn.Conv2d(in_channels, 1, kernel_size=1),
-                nn.ReLU(inplace=True))
+                nn.ReLU(inplace=True),
+            )
             self.h_sigmoid = h_sigmoid()
         else:
             self.AttnConv = None
@@ -179,7 +201,6 @@ class DyConv(torch.nn.Module):
     def forward(self, x):
         next_x = []
         for level, feature in enumerate(x):
-
             conv_args = dict()
             if self.offset is not None:
                 offset_mask = self.offset(feature)
@@ -192,8 +213,12 @@ class DyConv(torch.nn.Module):
             if level > 0:
                 temp_fea.append(self.DyConv[2](x[level - 1], **conv_args))
             if level < len(x) - 1:
-                temp_fea.append(F.upsample_bilinear(self.DyConv[0](x[level + 1], **conv_args),
-                                                    size=[feature.size(2), feature.size(3)]))
+                temp_fea.append(
+                    F.upsample_bilinear(
+                        self.DyConv[0](x[level + 1], **conv_args),
+                        size=[feature.size(2), feature.size(3)],
+                    )
+                )
             mean_fea = torch.mean(torch.stack(temp_fea), dim=0, keepdim=False)
 
             if self.AttnConv is not None:
@@ -216,18 +241,18 @@ class DyConv(torch.nn.Module):
 
 class DyHead(torch.nn.Module):
     def __init__(self, cfg):
-        super(DyHead, self).__init__()
+        super().__init__()
         self.cfg = cfg
         num_classes = cfg.MODEL.DYHEAD.NUM_CLASSES - 1
         num_anchors = len(cfg.MODEL.RPN.ASPECT_RATIOS) * cfg.MODEL.RPN.SCALES_PER_OCTAVE
         in_channels = cfg.MODEL.BACKBONE.OUT_CHANNELS
         channels = cfg.MODEL.DYHEAD.CHANNELS
         if cfg.MODEL.DYHEAD.USE_GN:
-            bn_type = ['gn', cfg.MODEL.GROUP_NORM.NUM_GROUPS]
+            bn_type = ["gn", cfg.MODEL.GROUP_NORM.NUM_GROUPS]
         elif cfg.MODEL.DYHEAD.USE_NSYNCBN:
-            bn_type = 'nsbn'
+            bn_type = "nsbn"
         elif cfg.MODEL.DYHEAD.USE_SYNCBN:
-            bn_type = 'sbn'
+            bn_type = "sbn"
         else:
             bn_type = None
 
@@ -253,7 +278,7 @@ class DyHead(torch.nn.Module):
                 )
             )
 
-        self.add_module('dyhead_tower', nn.Sequential(*dyhead_tower))
+        self.add_module("dyhead_tower", nn.Sequential(*dyhead_tower))
         if cfg.MODEL.DYHEAD.COSINE_SCALE <= 0:
             self.cls_logits = nn.Conv2d(channels, num_anchors * num_classes, kernel_size=1)
             self.cls_logits_bias = None
@@ -265,12 +290,11 @@ class DyHead(torch.nn.Module):
         self.centerness = nn.Conv2d(channels, num_anchors * 1, kernel_size=1)
 
         # initialization
-        for modules in [self.cls_logits, self.bbox_pred,
-                        self.centerness]:
+        for modules in [self.cls_logits, self.bbox_pred, self.centerness]:
             for l in modules.modules():
                 if isinstance(l, nn.Conv2d):
                     torch.nn.init.normal_(l.weight, std=0.01)
-                    if hasattr(l, 'bias') and l.bias is not None:
+                    if hasattr(l, "bias") and l.bias is not None:
                         torch.nn.init.constant_(l.bias, 0)
 
         # initialize the bias for focal loss
@@ -306,13 +330,10 @@ class DyHead(torch.nn.Module):
                 x_norm = torch.norm(dyhead_tower[l], p=2, dim=1, keepdim=True).expand_as(dyhead_tower[l])
                 x_normalized = dyhead_tower[l].div(x_norm + 1e-5)
                 # normalize weight
-                temp_norm = (
-                    torch.norm(self.cls_logits.weight.data, p=2, dim=1, keepdim=True)
-                        .expand_as(self.cls_logits.weight.data)
+                temp_norm = torch.norm(self.cls_logits.weight.data, p=2, dim=1, keepdim=True).expand_as(
+                    self.cls_logits.weight.data
                 )
-                self.cls_logits.weight.data = self.cls_logits.weight.data.div(
-                    temp_norm + 1e-5
-                )
+                self.cls_logits.weight.data = self.cls_logits.weight.data.div(temp_norm + 1e-5)
                 cos_dist = self.cls_logits(x_normalized)
                 logit = self.cosine_scale * cos_dist + self.cls_logits_bias.reshape(1, len(self.cls_logits_bias), 1, 1)
             logits.append(logit)
@@ -325,9 +346,8 @@ class DyHead(torch.nn.Module):
 
 
 class DyHeadModule(torch.nn.Module):
-
     def __init__(self, cfg):
-        super(DyHeadModule, self).__init__()
+        super().__init__()
         self.cfg = cfg
         self.head = DyHead(cfg)
         box_coder = BoxCoder(cfg)
@@ -352,7 +372,7 @@ class DyHeadModule(torch.nn.Module):
         losses = {
             "loss_cls": loss_box_cls,
             "loss_reg": loss_box_reg,
-            "loss_centerness": loss_centerness
+            "loss_centerness": loss_centerness,
         }
         if self.cfg.MODEL.RPN_ONLY:
             return None, losses
@@ -368,7 +388,10 @@ class DyHeadModule(torch.nn.Module):
             #     train_boxes.append(cat_boxlist([b, a]))
             for b, t in zip(boxes, targets):
                 tb = t.copy_with_fields(["labels"])
-                tb.add_field("scores", torch.ones(tb.bbox.shape[0], dtype=torch.bool, device=tb.bbox.device))
+                tb.add_field(
+                    "scores",
+                    torch.ones(tb.bbox.shape[0], dtype=torch.bool, device=tb.bbox.device),
+                )
                 train_boxes.append(cat_boxlist([b, tb]))
             return train_boxes, losses
 

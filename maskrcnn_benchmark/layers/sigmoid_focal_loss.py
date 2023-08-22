@@ -1,10 +1,9 @@
 import torch
-from torch import nn
 import torch.nn.functional as F
+from maskrcnn_benchmark import _C
+from torch import nn
 from torch.autograd import Function
 from torch.autograd.function import once_differentiable
-
-from maskrcnn_benchmark import _C
 
 
 # TODO: Use JIT to replace CUDA implementation in the future.
@@ -17,9 +16,7 @@ class _SigmoidFocalLoss(Function):
         ctx.gamma = gamma
         ctx.alpha = alpha
 
-        losses = _C.sigmoid_focalloss_forward(
-            logits, targets, num_classes, gamma, alpha
-        )
+        losses = _C.sigmoid_focalloss_forward(logits, targets, num_classes, gamma, alpha)
         return losses
 
     @staticmethod
@@ -30,9 +27,7 @@ class _SigmoidFocalLoss(Function):
         gamma = ctx.gamma
         alpha = ctx.alpha
         d_loss = d_loss.contiguous()
-        d_logits = _C.sigmoid_focalloss_backward(
-            logits, targets, d_loss, num_classes, gamma, alpha
-        )
+        d_logits = _C.sigmoid_focalloss_backward(logits, targets, d_loss, num_classes, gamma, alpha)
         return d_logits, None, None, None, None
 
 
@@ -48,13 +43,13 @@ def sigmoid_focal_loss_cpu(logits, targets, gamma, alpha):
     t = targets.unsqueeze(1)
     p = torch.sigmoid(logits)
     term1 = (1 - p) ** gamma * torch.log(p)
-    term2 = p ** gamma * torch.log(1 - p)
+    term2 = p**gamma * torch.log(1 - p)
     return -(t == class_range).float() * term1 * alpha - ((t != class_range) * (t >= 0)).float() * term2 * (1 - alpha)
 
 
 class SigmoidFocalLoss(nn.Module):
     def __init__(self, gamma, alpha):
-        super(SigmoidFocalLoss, self).__init__()
+        super().__init__()
         self.gamma = gamma
         self.alpha = alpha
 
@@ -79,8 +74,8 @@ def token_sigmoid_softmax_focal_loss(pred_logits, targets, alpha, gamma, text_ma
     # Another modification is that because we use the cross entropy version, there is no frequent or not frequent class.
     # So we temporarily retired the design of alpha.
 
-    assert (targets.dim() == 3)
-    assert (pred_logits.dim() == 3)  # batch x from x to
+    assert targets.dim() == 3
+    assert pred_logits.dim() == 3  # batch x from x to
 
     # reprocess target to become probability map ready for softmax
     targets = targets.float()
@@ -89,7 +84,7 @@ def token_sigmoid_softmax_focal_loss(pred_logits, targets, alpha, gamma, text_ma
 
     if text_mask is not None:
         # reserve the last token for non object
-        assert (text_mask.dim() == 2)
+        assert text_mask.dim() == 2
         text_mask[:, -1] = 1
         text_mask = (text_mask > 0).unsqueeze(1).repeat(1, pred_logits.size(1), 1)  # copy along the image channel
         pred_logits = pred_logits.masked_fill(~text_mask, -1000000)  # softmax
@@ -102,26 +97,26 @@ def token_sigmoid_softmax_focal_loss(pred_logits, targets, alpha, gamma, text_ma
     weight = torch.clamp(targets - out_prob, min=0.001) / filled_targets
     weight = torch.pow(weight, gamma)  # weight = torch.pow(torch.clamp(target - out_prob, min=0.01), gamma)
 
-    loss_ce = - targets * weight * pred_logits.log_softmax(
-        -1)  # only those positives with positive target_sim will have losses.
+    loss_ce = (
+        -targets * weight * pred_logits.log_softmax(-1)
+    )  # only those positives with positive target_sim will have losses.
     return loss_ce
 
 
 def token_sigmoid_binary_focal_loss_v2(pred_logits, targets, alpha, gamma, text_mask=None):
-    assert (targets.dim() == 3)
-    assert (pred_logits.dim() == 3)  # batch x from x to
+    assert targets.dim() == 3
+    assert pred_logits.dim() == 3  # batch x from x to
 
     if text_mask is not None:
-        assert (text_mask.dim() == 2)
+        assert text_mask.dim() == 2
 
     # We convert everything into binary
     out_prob = pred_logits.sigmoid()
     out_prob_neg_pos = torch.stack([1 - out_prob, out_prob], dim=-1) + 1e-8  # batch x boxes x 256 x 2
     weight = torch.pow(-out_prob_neg_pos + 1.0, gamma)
 
-    focal_zero = - weight[:, :, :, 0] * torch.log(out_prob_neg_pos[:, :, :, 0]) * (
-            1 - alpha)  # negative class
-    focal_one = - weight[:, :, :, 1] * torch.log(out_prob_neg_pos[:, :, :, 1]) * alpha  # positive class
+    focal_zero = -weight[:, :, :, 0] * torch.log(out_prob_neg_pos[:, :, :, 0]) * (1 - alpha)  # negative class
+    focal_one = -weight[:, :, :, 1] * torch.log(out_prob_neg_pos[:, :, :, 1]) * alpha  # positive class
     focal = torch.stack([focal_zero, focal_one], dim=-1)
     loss_ce = torch.gather(focal, index=targets.long().unsqueeze(-1), dim=-1)
     return loss_ce
@@ -145,12 +140,12 @@ def token_sigmoid_binary_focal_loss(pred_logits, targets, alpha, gamma, text_mas
     Returns:
         Loss tensor with the reduction option applied.
     """
-    assert (targets.dim() == 3)
-    assert (pred_logits.dim() == 3)  # batch x from x to
+    assert targets.dim() == 3
+    assert pred_logits.dim() == 3  # batch x from x to
 
     bs, n, _ = pred_logits.shape
     if text_mask is not None:
-        assert (text_mask.dim() == 2)
+        assert text_mask.dim() == 2
         text_mask = (text_mask > 0).unsqueeze(1)
         text_mask = text_mask.repeat(1, pred_logits.size(1), 1)  # copy along the image channel dimension
         pred_logits = torch.masked_select(pred_logits, text_mask)
@@ -173,7 +168,7 @@ def token_sigmoid_binary_focal_loss(pred_logits, targets, alpha, gamma, text_mas
 
 class TokenSigmoidFocalLoss(nn.Module):
     def __init__(self, alpha, gamma):
-        super(TokenSigmoidFocalLoss, self).__init__()
+        super().__init__()
         self.alpha = alpha
         self.gamma = gamma
 

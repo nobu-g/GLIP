@@ -1,21 +1,22 @@
 # Copyright (c) Facebook, Inc. and its affiliates. All Rights Reserved.
 import datetime
 import logging
-import sys
-import os
 import math
+import os
+import pdb
+import sys
 import time
 
 import torch
 import torch.distributed as dist
-
-from maskrcnn_benchmark.utils.comm import get_world_size, all_gather, is_main_process, broadcast_data, get_rank
-from maskrcnn_benchmark.utils.metric_logger import MetricLogger
-from maskrcnn_benchmark.utils.ema import ModelEma
-from maskrcnn_benchmark.utils.amp import autocast, GradScaler
 from maskrcnn_benchmark.data.datasets.evaluation import evaluate
+from maskrcnn_benchmark.utils.amp import GradScaler, autocast
+from maskrcnn_benchmark.utils.comm import all_gather, broadcast_data, get_rank, get_world_size, is_main_process
+from maskrcnn_benchmark.utils.ema import ModelEma
+from maskrcnn_benchmark.utils.metric_logger import MetricLogger
+
 from .inference import inference
-import pdb
+
 
 def reduce_loss_dict(loss_dict):
     """
@@ -43,18 +44,18 @@ def reduce_loss_dict(loss_dict):
 
 
 def do_train(
-        cfg,
-        model,
-        data_loader,
-        optimizer,
-        scheduler,
-        checkpointer,
-        device,
-        checkpoint_period,
-        arguments,
-        val_data_loader=None,
-        meters=None,
-        zero_shot=False
+    cfg,
+    model,
+    data_loader,
+    optimizer,
+    scheduler,
+    checkpointer,
+    device,
+    checkpoint_period,
+    arguments,
+    val_data_loader=None,
+    meters=None,
+    zero_shot=False,
 ):
     logger = logging.getLogger("maskrcnn_benchmark.trainer")
     logger.info("Start training")
@@ -75,26 +76,36 @@ def do_train(
 
     if cfg.SOLVER.CHECKPOINT_PER_EPOCH != -1 and cfg.SOLVER.MAX_EPOCH >= 1:
         checkpoint_period = len(data_loader) * cfg.SOLVER.CHECKPOINT_PER_EPOCH // cfg.SOLVER.MAX_EPOCH
-    
+
     if global_rank <= 0 and cfg.SOLVER.MAX_EPOCH >= 1:
-        print("Iter per epoch ", len(data_loader) // cfg.SOLVER.MAX_EPOCH )
+        print("Iter per epoch ", len(data_loader) // cfg.SOLVER.MAX_EPOCH)
 
     if cfg.SOLVER.AUTO_TERMINATE_PATIENCE != -1:
         patience_counter = 0
         previous_best = 0.0
 
     # Adapt the weight decay
-    if cfg.SOLVER.WEIGHT_DECAY_SCHEDULE and hasattr(scheduler, 'milestones'):
+    if cfg.SOLVER.WEIGHT_DECAY_SCHEDULE and hasattr(scheduler, "milestones"):
         milestone_target = 0
         for i, milstone in enumerate(list(scheduler.milestones)):
             if scheduler.last_epoch >= milstone * cfg.SOLVER.WEIGHT_DECAY_SCHEDULE_RATIO:
-                milestone_target = i+1
-    for iteration, (images, targets, idxs, positive_map, positive_map_eval, greenlight_map) in enumerate(data_loader, start_iter):
+                milestone_target = i + 1
+    for iteration, (
+        images,
+        targets,
+        idxs,
+        positive_map,
+        positive_map_eval,
+        greenlight_map,
+    ) in enumerate(data_loader, start_iter):
         nnegative = sum(len(target) < 1 for target in targets)
         nsample = len(targets)
         if nsample == nnegative or nnegative > nsample * cfg.SOLVER.MAX_NEG_PER_BATCH:
-            logger.info('[WARNING] Sampled {} negative in {} in a batch, greater the allowed ratio {}, skip'.
-                        format(nnegative, nsample, cfg.SOLVER.MAX_NEG_PER_BATCH))
+            logger.info(
+                "[WARNING] Sampled {} negative in {} in a batch, greater the allowed ratio {}, skip".format(
+                    nnegative, nsample, cfg.SOLVER.MAX_NEG_PER_BATCH
+                )
+            )
             continue
 
         data_time = time.time() - end
@@ -118,7 +129,13 @@ def do_train(
         if cfg.SOLVER.USE_AMP:
             with autocast():
                 if len(captions) > 0:
-                    loss_dict = model(images, targets, captions, positive_map, greenlight_map = greenlight_map)
+                    loss_dict = model(
+                        images,
+                        targets,
+                        captions,
+                        positive_map,
+                        greenlight_map=greenlight_map,
+                    )
                 else:
                     loss_dict = model(images, targets)
             losses = sum(loss for loss in loss_dict.values())
@@ -144,7 +161,6 @@ def do_train(
             #             dict_to_save,
             #             fname
             #         )
-
 
             if torch.isnan(losses) or torch.isinf(losses):
                 logging.error("NaN encountered, ignoring")
@@ -180,7 +196,6 @@ def do_train(
             #         dict_to_save,
             #         fname
             #     )
-                
 
             if torch.isnan(losses) or torch.isinf(losses):
                 losses[losses != losses] = 0
@@ -190,17 +205,17 @@ def do_train(
             scheduler.step()
 
         # Adapt the weight decay: only support multiStepLR
-        if cfg.SOLVER.WEIGHT_DECAY_SCHEDULE and hasattr(scheduler, 'milestones'):
+        if cfg.SOLVER.WEIGHT_DECAY_SCHEDULE and hasattr(scheduler, "milestones"):
             if milestone_target < len(scheduler.milestones):
                 next_milestone = list(scheduler.milestones)[milestone_target]
             else:
-                next_milestone = float('inf')
+                next_milestone = float("inf")
             if scheduler.last_epoch >= next_milestone * cfg.SOLVER.WEIGHT_DECAY_SCHEDULE_RATIO:
                 gamma = scheduler.gamma
-                logger.info("Drop the weight decay by {}!".format(gamma))
+                logger.info(f"Drop the weight decay by {gamma}!")
                 for param in optimizer.param_groups:
-                    if 'weight_decay' in param:
-                        param['weight_decay'] *= gamma
+                    if "weight_decay" in param:
+                        param["weight_decay"] *= gamma
                 # move the target forward
                 milestone_target += 1
 
@@ -219,8 +234,8 @@ def do_train(
         eta_string = str(datetime.timedelta(seconds=int(eta_seconds)))
 
         if iteration % 20 == 0 or iteration == max_iter:
-        # if iteration % 1 == 0 or iteration == max_iter:
-            #logger.info(
+            # if iteration % 1 == 0 or iteration == max_iter:
+            # logger.info(
             if global_rank <= 0:
                 print(
                     meters.delimiter.join(
@@ -253,18 +268,18 @@ def do_train(
                     except:
                         _model = model
                     _result = inference(
-                        model = _model,
-                        data_loader = val_data_loader,
+                        model=_model,
+                        data_loader=val_data_loader,
                         dataset_name="val",
                         device=device,
                         expected_results=cfg.TEST.EXPECTED_RESULTS,
                         expected_results_sigma_tol=cfg.TEST.EXPECTED_RESULTS_SIGMA_TOL,
                         output_folder=None,
                         cfg=cfg,
-                        verbose=False
+                        verbose=False,
                     )
                     if is_main_process():
-                        eval_result = _result[0].results['bbox']['AP']
+                        eval_result = _result[0].results["bbox"]["AP"]
             else:
                 results_dict = {}
                 cpu_device = torch.device("cpu")
@@ -278,21 +293,23 @@ def do_train(
                             captions = [t.get_field("caption") for t in targets if "caption" in t.fields()]
                             output = model(images, captions, positive_map)
                         output = [o.to(cpu_device) for o in output]
-                    results_dict.update(
-                        {img_id: result for img_id, result in zip(image_ids, output)}
-                    )
+                    results_dict.update({img_id: result for img_id, result in zip(image_ids, output)})
                 all_predictions = all_gather(results_dict)
                 if is_main_process():
                     predictions = {}
                     for p in all_predictions:
                         predictions.update(p)
                     predictions = [predictions[i] for i in list(sorted(predictions.keys()))]
-                    eval_result, _ = evaluate(val_data_loader.dataset, predictions, output_folder=None,
-                                            box_only=cfg.DATASETS.CLASS_AGNOSTIC)
+                    eval_result, _ = evaluate(
+                        val_data_loader.dataset,
+                        predictions,
+                        output_folder=None,
+                        box_only=cfg.DATASETS.CLASS_AGNOSTIC,
+                    )
                     if cfg.DATASETS.CLASS_AGNOSTIC:
-                        eval_result = eval_result.results['box_proposal']['AR@100']
+                        eval_result = eval_result.results["box_proposal"]["AR@100"]
                     else:
-                        eval_result = eval_result.results['bbox']['AP']
+                        eval_result = eval_result.results["bbox"]["AP"]
             model.train()
 
             if model_ema is not None and cfg.SOLVER.USE_EMA_FOR_MONITOR:
@@ -309,29 +326,31 @@ def do_train(
                             captions = [t.get_field("caption") for t in targets if "caption" in t.fields()]
                             output = model_ema.ema(images, captions, positive_map)
                         output = [o.to(cpu_device) for o in output]
-                    results_dict.update(
-                        {img_id: result for img_id, result in zip(image_ids, output)}
-                    )
+                    results_dict.update({img_id: result for img_id, result in zip(image_ids, output)})
                 all_predictions = all_gather(results_dict)
                 if is_main_process():
                     predictions = {}
                     for p in all_predictions:
                         predictions.update(p)
                     predictions = [predictions[i] for i in list(sorted(predictions.keys()))]
-                    eval_result, _ = evaluate(val_data_loader.dataset, predictions, output_folder=None,
-                                              box_only=cfg.DATASETS.CLASS_AGNOSTIC)
+                    eval_result, _ = evaluate(
+                        val_data_loader.dataset,
+                        predictions,
+                        output_folder=None,
+                        box_only=cfg.DATASETS.CLASS_AGNOSTIC,
+                    )
                     if cfg.DATASETS.CLASS_AGNOSTIC:
-                        eval_result = eval_result.results['box_proposal']['AR@100']
+                        eval_result = eval_result.results["box_proposal"]["AR@100"]
                     else:
-                        eval_result = eval_result.results['bbox']['AP']
-                
+                        eval_result = eval_result.results["bbox"]["AP"]
+
             arguments.update(eval_result=eval_result)
 
             if cfg.SOLVER.USE_AUTOSTEP:
-                eval_result = all_gather(eval_result)[0] #broadcast_data([eval_result])[0]
+                eval_result = all_gather(eval_result)[0]  # broadcast_data([eval_result])[0]
                 # print("Rank {} eval result gathered".format(cfg.local_rank), eval_result)
                 scheduler.step(eval_result)
-            
+
             if cfg.SOLVER.AUTO_TERMINATE_PATIENCE != -1:
                 if eval_result < previous_best:
                     patience_counter += 1
@@ -339,22 +358,25 @@ def do_train(
                     patience_counter = 0
                     previous_best = eval_result
                     checkpointer.save("model_best", **arguments)
-                print("Previous Best", previous_best, "Patience Counter", patience_counter, "Eval Result", eval_result)
+                print(
+                    "Previous Best",
+                    previous_best,
+                    "Patience Counter",
+                    patience_counter,
+                    "Eval Result",
+                    eval_result,
+                )
                 if patience_counter >= cfg.SOLVER.AUTO_TERMINATE_PATIENCE:
                     if is_main_process():
-                        print("\n\n\n\nAuto Termination at {}, current best {}\n\n\n".format(iteration, previous_best))
+                        print(f"\n\n\n\nAuto Termination at {iteration}, current best {previous_best}\n\n\n")
                     break
 
         if iteration % checkpoint_period == 0:
-            checkpointer.save("model_{:07d}".format(iteration), **arguments)
+            checkpointer.save(f"model_{iteration:07d}", **arguments)
         if iteration == max_iter:
             checkpointer.save("model_final", **arguments)
             break
 
     total_training_time = time.time() - start_training_time
     total_time_str = str(datetime.timedelta(seconds=total_training_time))
-    logger.info(
-        "Total training time: {} ({:.4f} s / it)".format(
-            total_time_str, total_training_time / (max_iter)
-        )
-    )
+    logger.info(f"Total training time: {total_time_str} ({total_training_time / (max_iter):.4f} s / it)")

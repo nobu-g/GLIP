@@ -43,7 +43,7 @@ We store Objects365 data in the TSV format. Please see [link](https://github.com
     wget https://penzhanwu2bbs.blob.core.windows.net/data/GLIPv1_Open/Objects365/object365_vgoiv6_class2ind.json -O DATASET/Objects365/object365_vgoiv6_class2ind.json
 
 We cannot host the image data. Please download the original image data and organize them into ``DATASET/Objects365/images.tsv`` and ``DATASET/Objects365/images.lineidx``.
-    
+
 #### ``Flickr30K``
 Download the Flickr30K images from [Link](http://shannon.cs.illinois.edu/DenotationGraph/) and put them under ``DATASET/flickr30k/flickr30k_images/``. Download the [MDETR annotations](https://zenodo.org/record/4729015/files/mdetr_annotations.tar.gz?download=1) and put them under ``DATASET/mdetr_annotations/``. The dataset structure should look like:
 
@@ -51,15 +51,15 @@ Download the Flickr30K images from [Link](http://shannon.cs.illinois.edu/Denotat
     DATASET/mdetr_annotations/final_flickr_separateGT_*
 
 #### ``MixedGrounding``
-This is the grounding dataset curated by [MDETR](https://github.com/ashkamath/mdetr/blob/main/.github/pretrain.md). 
-Please prepare the COCO train2014 data and put them under ``DATASET/coco/train2014``. 
-Prepare the [GQA images](https://nlp.stanford.edu/data/gqa/images.zip) and put them under ``DATASET/gqa/images/``. 
+This is the grounding dataset curated by [MDETR](https://github.com/ashkamath/mdetr/blob/main/.github/pretrain.md).
+Please prepare the COCO train2014 data and put them under ``DATASET/coco/train2014``.
+Prepare the [GQA images](https://nlp.stanford.edu/data/gqa/images.zip) and put them under ``DATASET/gqa/images/``.
 
 Then download the annotation files. The original MDETR annotation file contains COCO images; we provide a version without COCO images: ``wget https://penzhanwu2bbs.blob.core.windows.net/data/GLIPv1_Open/mdetr_annotations/final_mixed_train_no_coco.json -O DATASET/mdetr_annotations/final_mixed_train_no_coco.json``.
 
 The dataset structure should look like:
 
-    "DATASET/coco/train2014" 
+    "DATASET/coco/train2014"
     "DATASET/gqa/images"
     "DATASET/mdetr_annotations/final_mixed_train_no_coco.json",
 

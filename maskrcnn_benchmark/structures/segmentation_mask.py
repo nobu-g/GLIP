@@ -1,14 +1,13 @@
 # Copyright (c) Facebook, Inc. and its affiliates. All Rights Reserved.
-import torch
-
 import pycocotools.mask as mask_utils
+import torch
 
 # transpose
 FLIP_LEFT_RIGHT = 0
 FLIP_TOP_BOTTOM = 1
 
 
-class Mask(object):
+class Mask:
     """
     This class is unfinished and not meant for use yet
     It is supposed to contain the mask for an object as
@@ -22,9 +21,7 @@ class Mask(object):
 
     def transpose(self, method):
         if method not in (FLIP_LEFT_RIGHT, FLIP_TOP_BOTTOM):
-            raise NotImplementedError(
-                "Only FLIP_LEFT_RIGHT and FLIP_TOP_BOTTOM implemented"
-            )
+            raise NotImplementedError("Only FLIP_LEFT_RIGHT and FLIP_TOP_BOTTOM implemented")
 
         width, height = self.size
         if method == FLIP_LEFT_RIGHT:
@@ -48,7 +45,7 @@ class Mask(object):
         pass
 
 
-class Polygons(object):
+class Polygons:
     """
     This class holds a set of polygons that represents a single instance
     of an object mask. The object can be represented as a set of
@@ -68,9 +65,7 @@ class Polygons(object):
 
     def transpose(self, method):
         if method not in (FLIP_LEFT_RIGHT, FLIP_TOP_BOTTOM):
-            raise NotImplementedError(
-                "Only FLIP_LEFT_RIGHT and FLIP_TOP_BOTTOM implemented"
-            )
+            raise NotImplementedError("Only FLIP_LEFT_RIGHT and FLIP_TOP_BOTTOM implemented")
 
         flipped_polygons = []
         width, height = self.size
@@ -125,9 +120,7 @@ class Polygons(object):
     def convert(self, mode):
         width, height = self.size
         if mode == "mask":
-            rles = mask_utils.frPyObjects(
-                [p.detach().numpy() for p in self.polygons], height, width
-            )
+            rles = mask_utils.frPyObjects([p.detach().numpy() for p in self.polygons], height, width)
             rle = mask_utils.merge(rles)
             mask = mask_utils.decode(rle)
             mask = torch.from_numpy(mask)
@@ -136,14 +129,14 @@ class Polygons(object):
 
     def __repr__(self):
         s = self.__class__.__name__ + "("
-        s += "num_polygons={}, ".format(len(self.polygons))
-        s += "image_width={}, ".format(self.size[0])
-        s += "image_height={}, ".format(self.size[1])
-        s += "mode={})".format(self.mode)
+        s += f"num_polygons={len(self.polygons)}, "
+        s += f"image_width={self.size[0]}, "
+        s += f"image_height={self.size[1]}, "
+        s += f"mode={self.mode})"
         return s
 
 
-class SegmentationMask(object):
+class SegmentationMask:
     """
     This class stores the segmentations for all objects in the image
     """
@@ -164,9 +157,7 @@ class SegmentationMask(object):
 
     def transpose(self, method):
         if method not in (FLIP_LEFT_RIGHT, FLIP_TOP_BOTTOM):
-            raise NotImplementedError(
-                "Only FLIP_LEFT_RIGHT and FLIP_TOP_BOTTOM implemented"
-            )
+            raise NotImplementedError("Only FLIP_LEFT_RIGHT and FLIP_TOP_BOTTOM implemented")
 
         flipped = []
         for polygon in self.polygons:
@@ -208,7 +199,7 @@ class SegmentationMask(object):
 
     def __repr__(self):
         s = self.__class__.__name__ + "("
-        s += "num_instances={}, ".format(len(self.polygons))
-        s += "image_width={}, ".format(self.size[0])
-        s += "image_height={})".format(self.size[1])
+        s += f"num_instances={len(self.polygons)}, "
+        s += f"image_width={self.size[0]}, "
+        s += f"image_height={self.size[1]})"
         return s

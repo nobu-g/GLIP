@@ -4,7 +4,7 @@ from torch import nn
 
 class FastRCNNPredictor(nn.Module):
     def __init__(self, config, pretrained=None):
-        super(FastRCNNPredictor, self).__init__()
+        super().__init__()
 
         stage_index = 4
         stage2_relative_factor = 2 ** (stage_index - 1)
@@ -32,7 +32,7 @@ class FastRCNNPredictor(nn.Module):
 
 class FPNPredictor(nn.Module):
     def __init__(self, cfg):
-        super(FPNPredictor, self).__init__()
+        super().__init__()
         num_classes = cfg.MODEL.ROI_BOX_HEAD.NUM_CLASSES
         representation_size = cfg.MODEL.ROI_BOX_HEAD.MLP_HEAD_DIM
 

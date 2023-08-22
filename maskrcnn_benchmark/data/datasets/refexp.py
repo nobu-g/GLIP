@@ -2,10 +2,9 @@ import copy
 from collections import defaultdict
 from pathlib import Path
 
+import maskrcnn_benchmark.utils.dist as dist
 import torch
 import torch.utils.data
-
-import maskrcnn_benchmark.utils.dist as dist
 from maskrcnn_benchmark.layers.set_loss import generalized_box_iou
 
 from .modulated_coco import ModulatedDataset
@@ -15,7 +14,7 @@ class RefExpDataset(ModulatedDataset):
     pass
 
 
-class RefExpEvaluator(object):
+class RefExpEvaluator:
     def __init__(self, refexp_gt, iou_types, k=(1, 5, 10), thresh_iou=0.5):
         assert isinstance(k, (list, tuple))
         refexp_gt = copy.deepcopy(refexp_gt)
@@ -56,7 +55,8 @@ class RefExpEvaluator(object):
                 prediction = self.predictions[image_id]
                 assert prediction is not None
                 sorted_scores_boxes = sorted(
-                    zip(prediction["scores"].tolist(), prediction["boxes"].tolist()), reverse=True
+                    zip(prediction["scores"].tolist(), prediction["boxes"].tolist()),
+                    reverse=True,
                 )
                 sorted_scores, sorted_boxes = zip(*sorted_scores_boxes)
                 sorted_boxes = torch.cat([torch.as_tensor(x).view(1, 4) for x in sorted_boxes])

@@ -5,7 +5,6 @@ from typing import Any, Callable, Optional, Tuple
 
 import torch
 from maskrcnn_benchmark.structures.bounding_box import BoxList
-
 from PIL import Image, ImageDraw
 from torchvision.datasets.vision import VisionDataset
 
@@ -29,15 +28,15 @@ class CustomCocoDetection(VisionDataset):
     """
 
     def __init__(
-            self,
-            root_coco: str,
-            root_vg: str,
-            annFile: str,
-            transform: Optional[Callable] = None,
-            target_transform: Optional[Callable] = None,
-            transforms: Optional[Callable] = None,
+        self,
+        root_coco: str,
+        root_vg: str,
+        annFile: str,
+        transform: Optional[Callable] = None,
+        target_transform: Optional[Callable] = None,
+        transforms: Optional[Callable] = None,
     ) -> None:
-        super(CustomCocoDetection, self).__init__(root_coco, transforms, transform, target_transform)
+        super().__init__(root_coco, transforms, transform, target_transform)
         from pycocotools.coco import COCO
 
         self.coco = COCO(annFile)
@@ -88,28 +87,35 @@ class CustomCocoDetection(VisionDataset):
 class MixedDataset(CustomCocoDetection):
     """Same as the modulated detection dataset, except with multiple img sources"""
 
-    def __init__(self,
-                 img_folder_coco,
-                 img_folder_vg,
-                 ann_file,
-                 transforms,
-                 return_masks,
-                 return_tokens,
-                 tokenizer=None,
-                 disable_clip_to_image=False,
-                 no_mask_for_gold=False,
-                 max_query_len=256,
-                 **kwargs):
-        super(MixedDataset, self).__init__(img_folder_coco, img_folder_vg, ann_file)
+    def __init__(
+        self,
+        img_folder_coco,
+        img_folder_vg,
+        ann_file,
+        transforms,
+        return_masks,
+        return_tokens,
+        tokenizer=None,
+        disable_clip_to_image=False,
+        no_mask_for_gold=False,
+        max_query_len=256,
+        **kwargs,
+    ):
+        super().__init__(img_folder_coco, img_folder_vg, ann_file)
         self._transforms = transforms
         self.max_query_len = max_query_len
-        self.prepare = ConvertCocoPolysToMask(return_masks, return_tokens, tokenizer=tokenizer, max_query_len=max_query_len)
+        self.prepare = ConvertCocoPolysToMask(
+            return_masks,
+            return_tokens,
+            tokenizer=tokenizer,
+            max_query_len=max_query_len,
+        )
         self.id_to_img_map = {k: v for k, v in enumerate(self.ids)}
         self.disable_clip_to_image = disable_clip_to_image
         self.no_mask_for_gold = no_mask_for_gold
 
     def __getitem__(self, idx):
-        img, target = super(MixedDataset, self).__getitem__(idx)
+        img, target = super().__getitem__(idx)
 
         image_id = self.ids[idx]
         caption = self.coco.loadImgs(image_id)[0]["caption"]

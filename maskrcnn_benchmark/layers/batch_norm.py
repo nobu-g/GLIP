@@ -1,10 +1,10 @@
 # Copyright (c) Facebook, Inc. and its affiliates. All Rights Reserved.
-import torch
-from torch import nn
-
-import torch.distributed as dist
 import maskrcnn_benchmark.utils.comm as comm
+import torch
+import torch.distributed as dist
+from torch import nn
 from torch.autograd.function import Function
+
 
 class FrozenBatchNorm2d(nn.Module):
     """
@@ -13,7 +13,7 @@ class FrozenBatchNorm2d(nn.Module):
     """
 
     def __init__(self, n):
-        super(FrozenBatchNorm2d, self).__init__()
+        super().__init__()
         self.register_buffer("weight", torch.ones(n))
         self.register_buffer("bias", torch.zeros(n))
         self.register_buffer("running_mean", torch.zeros(n))
@@ -96,7 +96,12 @@ class NaiveSyncBatchNorm2d(nn.BatchNorm2d):
                 vec = vec + input.sum()  # make sure there is gradient w.r.t input
             else:
                 vec = torch.cat(
-                    [mean, meansqr, torch.ones([1], device=mean.device, dtype=mean.dtype)], dim=0
+                    [
+                        mean,
+                        meansqr,
+                        torch.ones([1], device=mean.device, dtype=mean.dtype),
+                    ],
+                    dim=0,
                 )
             vec = AllReduce.apply(vec * B)
 

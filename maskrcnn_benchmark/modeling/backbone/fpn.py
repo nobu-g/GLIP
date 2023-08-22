@@ -3,6 +3,7 @@ import torch
 import torch.nn.functional as F
 from torch import nn
 
+
 class FPN(nn.Module):
     """
     Module that adds FPN on top of a list of feature maps.
@@ -11,8 +12,15 @@ class FPN(nn.Module):
     """
 
     def __init__(
-        self, in_channels_list, out_channels, conv_block, top_blocks=None, drop_block=None, use_spp=False, use_pan=False,
-            return_swint_feature_before_fusion=False
+        self,
+        in_channels_list,
+        out_channels,
+        conv_block,
+        top_blocks=None,
+        drop_block=None,
+        use_spp=False,
+        use_pan=False,
+        return_swint_feature_before_fusion=False,
     ):
         """
         Arguments:
@@ -23,20 +31,20 @@ class FPN(nn.Module):
                 be performed on the output of the last (smallest resolution)
                 FPN output, and the result will extend the result list
         """
-        super(FPN, self).__init__()
+        super().__init__()
         self.inner_blocks = []
         self.layer_blocks = []
         self.pan_blocks = [] if use_pan else None
         self.spp_block = SPPLayer() if use_spp else None
         self.return_swint_feature_before_fusion = return_swint_feature_before_fusion
         for idx, in_channels in enumerate(in_channels_list, 1):
-            inner_block = "fpn_inner{}".format(idx)
-            layer_block = "fpn_layer{}".format(idx)
+            inner_block = f"fpn_inner{idx}"
+            layer_block = f"fpn_layer{idx}"
 
             if in_channels == 0:
                 continue
-            if idx==len(in_channels_list) and use_spp:
-                in_channels = in_channels*4
+            if idx == len(in_channels_list) and use_spp:
+                in_channels = in_channels * 4
             inner_block_module = conv_block(in_channels, out_channels, 1)
             layer_block_module = conv_block(out_channels, out_channels, 3, 1)
             self.add_module(inner_block, inner_block_module)
@@ -45,10 +53,10 @@ class FPN(nn.Module):
             self.layer_blocks.append(layer_block)
 
             if use_pan:
-                pan_in_block = "pan_in_layer{}".format(idx)
+                pan_in_block = f"pan_in_layer{idx}"
                 pan_in_block_module = conv_block(out_channels, out_channels, 3, 2)
                 self.add_module(pan_in_block, pan_in_block_module)
-                pan_out_block = "pan_out_layer{}".format(idx)
+                pan_out_block = f"pan_out_layer{idx}"
                 pan_out_block_module = conv_block(out_channels, out_channels, 3, 1)
                 self.add_module(pan_out_block, pan_out_block_module)
                 self.pan_blocks.append([pan_in_block, pan_out_block])
@@ -106,7 +114,6 @@ class FPN(nn.Module):
             last_outer = results[0]
             pan_results.append(last_outer)
             for outer_top_down, pan_block in zip(results[1:], self.pan_blocks):
-
                 if self.drop_block and self.training:
                     pan_lateral = getattr(self, pan_block[0])(self.drop_block(last_outer))
                 else:
@@ -138,8 +145,9 @@ class LastLevelP6P7(nn.Module):
     """
     This module is used in RetinaNet to generate extra layers, P6 and P7.
     """
+
     def __init__(self, in_channels, out_channels):
-        super(LastLevelP6P7, self).__init__()
+        super().__init__()
         self.p6 = nn.Conv2d(in_channels, out_channels, 3, 2, 1)
         self.p7 = nn.Conv2d(out_channels, out_channels, 3, 2, 1)
         for module in [self.p6, self.p7]:
@@ -156,12 +164,12 @@ class LastLevelP6P7(nn.Module):
 
 class SPPLayer(nn.Module):
     def __init__(self):
-        super(SPPLayer, self).__init__()
+        super().__init__()
 
     def forward(self, x):
         x_1 = x
         x_2 = F.max_pool2d(x, 5, stride=1, padding=2)
         x_3 = F.max_pool2d(x, 9, stride=1, padding=4)
         x_4 = F.max_pool2d(x, 13, stride=1, padding=6)
-        out = torch.cat((x_1, x_2, x_3, x_4),dim=1)
+        out = torch.cat((x_1, x_2, x_3, x_4), dim=1)
         return out

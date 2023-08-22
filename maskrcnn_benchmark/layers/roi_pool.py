@@ -1,11 +1,10 @@
 # Copyright (c) Facebook, Inc. and its affiliates. All Rights Reserved.
 import torch
+from maskrcnn_benchmark import _C
 from torch import nn
 from torch.autograd import Function
 from torch.autograd.function import once_differentiable
 from torch.nn.modules.utils import _pair
-
-from maskrcnn_benchmark import _C
 
 
 class _ROIPool(Function):
@@ -14,9 +13,7 @@ class _ROIPool(Function):
         ctx.output_size = _pair(output_size)
         ctx.spatial_scale = spatial_scale
         ctx.input_shape = input.size()
-        output, argmax = _C.roi_pool_forward(
-            input, roi, spatial_scale, output_size[0], output_size[1]
-        )
+        output, argmax = _C.roi_pool_forward(input, roi, spatial_scale, output_size[0], output_size[1])
         ctx.save_for_backward(input, roi, argmax)
         return output
 
@@ -48,7 +45,7 @@ roi_pool = _ROIPool.apply
 
 class ROIPool(nn.Module):
     def __init__(self, output_size, spatial_scale):
-        super(ROIPool, self).__init__()
+        super().__init__()
         self.output_size = output_size
         self.spatial_scale = spatial_scale
 

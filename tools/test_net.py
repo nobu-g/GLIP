@@ -13,14 +13,14 @@ from maskrcnn_benchmark.engine.inference import inference
 from maskrcnn_benchmark.modeling.detector import build_detection_model
 from maskrcnn_benchmark.utils.checkpoint import DetectronCheckpointer
 from maskrcnn_benchmark.utils.collect_env import collect_env_info
-from maskrcnn_benchmark.utils.comm import synchronize, get_rank
+from maskrcnn_benchmark.utils.comm import get_rank, synchronize
 from maskrcnn_benchmark.utils.logger import setup_logger
 from maskrcnn_benchmark.utils.miscellaneous import mkdir
 from maskrcnn_benchmark.utils.stats import get_model_complexity_info
 
 
 def run_test(cfg, model, distributed, log_dir):
-    if distributed and hasattr(model, 'module'):
+    if distributed and hasattr(model, "module"):
         model = model.module
     torch.cuda.empty_cache()  # TODO check if it helps
     iou_types = ("bbox",)
@@ -44,12 +44,12 @@ def run_test(cfg, model, distributed, log_dir):
             data_loader_val,
             dataset_name=dataset_name,
             iou_types=iou_types,
-            box_only=cfg.MODEL.RPN_ONLY and (cfg.MODEL.RPN_ARCHITECTURE=="RPN" or cfg.DATASETS.CLASS_AGNOSTIC),
+            box_only=cfg.MODEL.RPN_ONLY and (cfg.MODEL.RPN_ARCHITECTURE == "RPN" or cfg.DATASETS.CLASS_AGNOSTIC),
             device=cfg.MODEL.DEVICE,
             expected_results=cfg.TEST.EXPECTED_RESULTS,
             expected_results_sigma_tol=cfg.TEST.EXPECTED_RESULTS_SIGMA_TOL,
             output_folder=output_folder,
-            cfg=cfg
+            cfg=cfg,
         )
         synchronize()
 
@@ -83,9 +83,7 @@ def main():
 
     if distributed:
         torch.cuda.set_device(args.local_rank)
-        torch.distributed.init_process_group(
-            backend="nccl", init_method="env://"
-        )
+        torch.distributed.init_process_group(backend="nccl", init_method="env://")
 
     cfg.local_rank = args.local_rank
     cfg.num_gpus = num_gpus
@@ -101,7 +99,7 @@ def main():
         mkdir(log_dir)
     logger = setup_logger("maskrcnn_benchmark", log_dir, get_rank())
     logger.info(args)
-    logger.info("Using {} GPUs".format(num_gpus))
+    logger.info(f"Using {num_gpus} GPUs")
     logger.info(cfg)
 
     logger.info("Collecting env info (might take some time)")
@@ -110,10 +108,12 @@ def main():
     model = build_detection_model(cfg)
     model.to(cfg.MODEL.DEVICE)
 
-    params, flops = get_model_complexity_info(model,
-                                              (3, cfg.INPUT.MAX_SIZE_TEST, cfg.INPUT.MIN_SIZE_TEST),
-                                              input_constructor=lambda x: {'images': [torch.rand(x).cuda()]})
-    print("FLOPs: {}, #Parameter: {}".format(params, flops))
+    params, flops = get_model_complexity_info(
+        model,
+        (3, cfg.INPUT.MAX_SIZE_TEST, cfg.INPUT.MIN_SIZE_TEST),
+        input_constructor=lambda x: {"images": [torch.rand(x).cuda()]},
+    )
+    print(f"FLOPs: {params}, #Parameter: {flops}")
 
     checkpointer = DetectronCheckpointer(cfg, model, save_dir=cfg.OUTPUT_DIR)
     if args.weight:
@@ -122,7 +122,7 @@ def main():
         _ = checkpointer.load(cfg.MODEL.WEIGHT)
 
     run_test(cfg, model, distributed, log_dir)
-    logger.info("FLOPs: {}, #Parameter: {}".format(params, flops))
+    logger.info(f"FLOPs: {params}, #Parameter: {flops}")
 
 
 if __name__ == "__main__":

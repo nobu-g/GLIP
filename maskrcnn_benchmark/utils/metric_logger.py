@@ -1,14 +1,14 @@
 # Copyright (c) Facebook, Inc. and its affiliates. All Rights Reserved.
-from collections import defaultdict
-from collections import deque
+import time
+from collections import defaultdict, deque
+from datetime import datetime
 
 import torch
-import time
-from datetime import datetime
+
 from .comm import is_main_process
 
 
-class SmoothedValue(object):
+class SmoothedValue:
     """Track a series of values and provide access to smoothed values over a
     window or the global series average.
     """
@@ -42,7 +42,7 @@ class SmoothedValue(object):
         return self.total / self.count
 
 
-class AverageMeter(object):
+class AverageMeter:
     """Computes and stores the average and current value"""
 
     def __init__(self):
@@ -61,7 +61,7 @@ class AverageMeter(object):
         self.avg = self.sum / self.count
 
 
-class MetricLogger(object):
+class MetricLogger:
     def __init__(self, delimiter="\t"):
         self.meters = defaultdict(SmoothedValue)
         self.delimiter = delimiter
@@ -78,26 +78,19 @@ class MetricLogger(object):
             return self.meters[attr]
         if attr in self.__dict__:
             return self.__dict__[attr]
-        raise AttributeError("'{}' object has no attribute '{}'".format(
-            type(self).__name__, attr))
+        raise AttributeError(f"'{type(self).__name__}' object has no attribute '{attr}'")
 
     def __str__(self):
         loss_str = []
         for name, meter in self.meters.items():
-            loss_str.append(
-                "{}: {:.4f} ({:.4f})".format(name, meter.median, meter.global_avg)
-            )
+            loss_str.append(f"{name}: {meter.median:.4f} ({meter.global_avg:.4f})")
         return self.delimiter.join(loss_str)
 
 
 # haotian added tensorboard support
 class TensorboardLogger(MetricLogger):
-    def __init__(self,
-                 log_dir,
-                 start_iter=0,
-                 delimiter='\t'
-                 ):
-        super(TensorboardLogger, self).__init__(delimiter)
+    def __init__(self, log_dir, start_iter=0, delimiter="\t"):
+        super().__init__(delimiter)
         self.iteration = start_iter
         self.writer = self._get_tensorboard_writer(log_dir)
 
@@ -107,19 +100,18 @@ class TensorboardLogger(MetricLogger):
             from tensorboardX import SummaryWriter
         except ImportError:
             raise ImportError(
-                'To use tensorboard please install tensorboardX '
-                '[ pip install tensorflow tensorboardX ].'
+                "To use tensorboard please install tensorboardX " "[ pip install tensorflow tensorboardX ]."
             )
 
         if is_main_process():
             # timestamp = datetime.fromtimestamp(time.time()).strftime('%Y%m%d-%H:%M')
-            tb_logger = SummaryWriter('{}'.format(log_dir))
+            tb_logger = SummaryWriter(f"{log_dir}")
             return tb_logger
         else:
             return None
 
     def update(self, **kwargs):
-        super(TensorboardLogger, self).update(**kwargs)
+        super().update(**kwargs)
         if self.writer:
             for k, v in kwargs.items():
                 if isinstance(v, torch.Tensor):

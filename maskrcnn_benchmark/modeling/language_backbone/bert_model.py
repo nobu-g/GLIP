@@ -1,18 +1,22 @@
 from copy import deepcopy
+
 import numpy as np
 import torch
 from torch import nn
 
 # from pytorch_pretrained_bert.modeling import BertModel
-from transformers import BertConfig, RobertaConfig, RobertaModel, BertModel
+from transformers import BertConfig, BertModel, RobertaConfig, RobertaModel
 
 
 class BertEncoder(nn.Module):
     def __init__(self, cfg):
-        super(BertEncoder, self).__init__()
+        super().__init__()
         self.cfg = cfg
         self.bert_name = cfg.MODEL.LANGUAGE_BACKBONE.MODEL_TYPE
-        print("LANGUAGE BACKBONE USE GRADIENT CHECKPOINTING: ", self.cfg.MODEL.LANGUAGE_BACKBONE.USE_CHECKPOINT)
+        print(
+            "LANGUAGE BACKBONE USE GRADIENT CHECKPOINTING: ",
+            self.cfg.MODEL.LANGUAGE_BACKBONE.USE_CHECKPOINT,
+        )
 
         if self.bert_name == "bert-base-uncased":
             config = BertConfig.from_pretrained(self.bert_name)
@@ -43,7 +47,7 @@ class BertEncoder(nn.Module):
             # outputs has 13 layers, 1 input layer and 12 hidden layers
             encoded_layers = outputs.hidden_states[1:]
             features = None
-            features = torch.stack(encoded_layers[-self.num_layers:], 1).mean(1)
+            features = torch.stack(encoded_layers[-self.num_layers :], 1).mean(1)
 
             # language embedding has shape [len(phrase), seq_len, language_dim]
             features = features / self.num_layers
@@ -63,7 +67,7 @@ class BertEncoder(nn.Module):
             encoded_layers = outputs.hidden_states[1:]
 
             features = None
-            features = torch.stack(encoded_layers[-self.num_layers:], 1).mean(1)
+            features = torch.stack(encoded_layers[-self.num_layers :], 1).mean(1)
             # language embedding has shape [len(phrase), seq_len, language_dim]
             features = features / self.num_layers
 
@@ -74,6 +78,6 @@ class BertEncoder(nn.Module):
             "aggregate": aggregate,
             "embedded": embedded,
             "masks": mask,
-            "hidden": encoded_layers[-1]
+            "hidden": encoded_layers[-1],
         }
         return ret

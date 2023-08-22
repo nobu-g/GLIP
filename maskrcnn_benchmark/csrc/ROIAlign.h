@@ -43,4 +43,3 @@ at::Tensor ROIAlign_backward(const at::Tensor& grad,
   }
   AT_ERROR("Not implemented on the CPU");
 }
-

@@ -6,17 +6,15 @@ import json
 import os
 from collections import OrderedDict, defaultdict
 
+import maskrcnn_benchmark.utils.mdetr_dist as dist
 import numpy as np
 import pycocotools.mask as mask_util
 import torch
 import torch._six
-
-import maskrcnn_benchmark.utils.mdetr_dist  as dist
-
 from maskrcnn_benchmark.utils.mdetr_dist import all_gather
 
-
 from .lvis import LVIS
+
 
 def merge(img_ids, eval_imgs):
     all_img_ids = all_gather(img_ids)
@@ -59,10 +57,10 @@ class Params:
         self.rec_thrs = np.linspace(0.0, 1.00, int(np.round((1.00 - 0.0) / 0.01)) + 1, endpoint=True)
         self.max_dets = 300
         self.area_rng = [
-            [0 ** 2, 1e5 ** 2],
-            [0 ** 2, 32 ** 2],
-            [32 ** 2, 96 ** 2],
-            [96 ** 2, 1e5 ** 2],
+            [0**2, 1e5**2],
+            [0**2, 32**2],
+            [32**2, 96**2],
+            [96**2, 1e5**2],
         ]
         self.area_rng_lbl = ["all", "small", "medium", "large"]
         self.use_cats = 1
@@ -85,7 +83,7 @@ class LVISResults(LVIS):
             max_dets (int):  max number of detections per image. The official
             value of max_dets for LVIS is 300.
         """
-        super(LVISResults, self).__init__()
+        super().__init__()
         assert isinstance(lvis_gt, LVIS)
         self.dataset["images"] = [img for img in lvis_gt.dataset["images"]]
 
@@ -163,21 +161,21 @@ class LVISEval:
         """
 
         if iou_type not in ["bbox", "segm"]:
-            raise ValueError("iou_type: {} is not supported.".format(iou_type))
+            raise ValueError(f"iou_type: {iou_type} is not supported.")
 
         if isinstance(lvis_gt, LVIS):
             self.lvis_gt = lvis_gt
         elif isinstance(lvis_gt, str):
             self.lvis_gt = LVIS(lvis_gt)
         else:
-            raise TypeError("Unsupported type {} of lvis_gt.".format(lvis_gt))
+            raise TypeError(f"Unsupported type {lvis_gt} of lvis_gt.")
 
         if isinstance(lvis_dt, LVISResults):
             self.lvis_dt = lvis_dt
         elif isinstance(lvis_dt, (str, list)):
             self.lvis_dt = LVISResults(self.lvis_gt, lvis_dt)
         elif lvis_dt is not None:
-            raise TypeError("Unsupported type {} of lvis_dt.".format(lvis_dt))
+            raise TypeError(f"Unsupported type {lvis_dt} of lvis_dt.")
 
         # per-image per-category evaluation results
         self.eval_imgs = defaultdict(list)
@@ -575,11 +573,11 @@ class LVISEval:
         self.stats[7] = self._summarize("ap", freq_group_idx=1)
         self.stats[8] = self._summarize("ap", freq_group_idx=2)
 
-        key = "AR@{}".format(max_dets)
+        key = f"AR@{max_dets}"
         self.results[key] = self._summarize("ar")
 
         for area_rng in ["small", "medium", "large"]:
-            key = "AR{}@{}".format(area_rng[0], max_dets)
+            key = f"AR{area_rng[0]}@{max_dets}"
             self.results[key] = self._summarize("ar", area_rng=area_rng)
         _returned = self.print_results()
         return _returned
@@ -604,9 +602,9 @@ class LVISEval:
 
             if len(key) > 2 and key[2].isdigit():
                 iou_thr = float(key[2:]) / 100
-                iou = "{:0.2f}".format(iou_thr)
+                iou = f"{iou_thr:0.2f}"
             else:
-                iou = "{:0.2f}:{:0.2f}".format(self.params.iou_thrs[0], self.params.iou_thrs[-1])
+                iou = f"{self.params.iou_thrs[0]:0.2f}:{self.params.iou_thrs[-1]:0.2f}"
 
             if len(key) > 2 and key[2] in ["r", "c", "f"]:
                 cat_group_name = key[2]
@@ -633,7 +631,7 @@ class LVISEval:
 #################################################################
 
 
-class LvisEvaluator(object):
+class LvisEvaluator:
     def __init__(self, lvis_gt, iou_types):
         assert isinstance(iou_types, (list, tuple))
         # lvis_gt = copy.deepcopy(lvis_gt)
@@ -661,7 +659,9 @@ class LvisEvaluator(object):
             lvis_eval.evaluate()
             eval_imgs = lvis_eval.eval_imgs
             eval_imgs = np.asarray(eval_imgs).reshape(
-                len(lvis_eval.params.cat_ids), len(lvis_eval.params.area_rng), len(lvis_eval.params.img_ids)
+                len(lvis_eval.params.cat_ids),
+                len(lvis_eval.params.area_rng),
+                len(lvis_eval.params.img_ids),
             )
 
             self.eval_imgs[iou_type].append(eval_imgs)
@@ -677,7 +677,7 @@ class LvisEvaluator(object):
 
     def summarize(self):
         for iou_type, lvis_eval in self.coco_eval.items():
-            print("IoU metric: {}".format(iou_type))
+            print(f"IoU metric: {iou_type}")
             lvis_eval.summarize()
 
     def prepare(self, predictions, iou_type):
@@ -688,7 +688,7 @@ class LvisEvaluator(object):
         elif iou_type == "keypoints":
             return self.prepare_for_lvis_keypoint(predictions)
         else:
-            raise ValueError("Unknown iou type {}".format(iou_type))
+            raise ValueError(f"Unknown iou type {iou_type}")
 
     def prepare_for_lvis_detection(self, predictions):
         lvis_results = []
@@ -763,9 +763,8 @@ def _merge_lists(listA, listB, maxN, key):
 
 
 # Adapted from https://github.com/achalddave/large-vocab-devil/blob/9aaddc15b00e6e0d370b16743233e40d973cd53f/scripts/evaluate_ap_fixed.py
-class LvisEvaluatorFixedAP(object):
+class LvisEvaluatorFixedAP:
     def __init__(self, gt: LVIS, topk=10000, fixed_ap=True):
-
         self.results = []
         self.by_cat = {}
         self.gt = gt
@@ -871,9 +870,8 @@ class LvisEvaluatorFixedAP(object):
         return scores
 
 
-class LvisDumper(object):
+class LvisDumper:
     def __init__(self, topk=10000, fixed_ap=True, out_path="lvis_eval"):
-
         self.results = []
         self.by_cat = {}
         self.topk = topk
@@ -993,6 +991,7 @@ def create_common_lvis_eval(lvis_eval, img_ids, eval_imgs):
 
     lvis_eval.eval_imgs = eval_imgs
     lvis_eval.params.img_ids = img_ids
+
 
 def lvis_evaluation():
     pass

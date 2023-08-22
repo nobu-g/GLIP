@@ -35,13 +35,13 @@ class LVIS:
 
             tic = time.time()
             self.dataset = self._load_json(annotation_path)
-            print("Done (t={:0.2f}s)".format(time.time() - tic))
+            print(f"Done (t={time.time() - tic:0.2f}s)")
 
-            assert type(self.dataset) == dict, "Annotation file format {} not supported.".format(type(self.dataset))
+            assert type(self.dataset) == dict, f"Annotation file format {type(self.dataset)} not supported."
             self._create_index()
 
     def _load_json(self, path):
-        with open(path, "r") as f:
+        with open(path) as f:
             return json.load(f)
 
     def _create_index(self):
@@ -210,7 +210,7 @@ class LVIS:
 
 class LvisDetectionBase(torchvision.datasets.VisionDataset):
     def __init__(self, root, annFile, transform=None, target_transform=None, transforms=None):
-        super(LvisDetectionBase, self).__init__(root, transforms, transform, target_transform)
+        super().__init__(root, transforms, transform, target_transform)
         self.lvis = LVIS(annFile)
         self.ids = list(sorted(self.lvis.imgs.keys()))
 
@@ -233,7 +233,6 @@ class LvisDetectionBase(torchvision.datasets.VisionDataset):
             img, target = self.transforms(img, target)
 
         return img, target
-    
 
     def __len__(self):
         return len(self.ids)
@@ -241,28 +240,28 @@ class LvisDetectionBase(torchvision.datasets.VisionDataset):
 
 class LvisDetection(LvisDetectionBase):
     def __init__(self, img_folder, ann_file, transforms, return_masks=False, **kwargs):
-        super(LvisDetection, self).__init__(img_folder, ann_file)
+        super().__init__(img_folder, ann_file)
         self.ann_file = ann_file
         self._transforms = transforms
         self.prepare = ConvertCocoPolysToMask(return_masks)
 
     def __getitem__(self, idx):
-        img, target = super(LvisDetection, self).__getitem__(idx)
+        img, target = super().__getitem__(idx)
         image_id = self.ids[idx]
         target = {"image_id": image_id, "annotations": target}
         img, target = self.prepare(img, target)
         if self._transforms is not None:
             img = self._transforms(img)
         return img, target, idx
-    
+
     def get_raw_image(self, idx):
-        img, target = super(LvisDetection, self).__getitem__(idx)
+        img, target = super().__getitem__(idx)
         return img
-    
+
     def categories(self):
         id2cat = {c["id"]: c for c in self.lvis.dataset["categories"]}
         all_cats = sorted(list(id2cat.keys()))
         categories = {}
         for l in list(all_cats):
-            categories[l] = id2cat[l]['name']
+            categories[l] = id2cat[l]["name"]
         return categories

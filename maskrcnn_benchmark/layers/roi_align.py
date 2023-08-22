@@ -1,11 +1,11 @@
 # Copyright (c) Facebook, Inc. and its affiliates. All Rights Reserved.
 import torch
+from maskrcnn_benchmark import _C
 from torch import nn
 from torch.autograd import Function
 from torch.autograd.function import once_differentiable
 from torch.nn.modules.utils import _pair
 
-from maskrcnn_benchmark import _C
 
 class _ROIAlign(Function):
     @staticmethod
@@ -15,15 +15,13 @@ class _ROIAlign(Function):
         ctx.spatial_scale = spatial_scale
         ctx.sampling_ratio = sampling_ratio
         ctx.input_shape = input.size()
-        output = _C.roi_align_forward(
-            input, roi, spatial_scale, output_size[0], output_size[1], sampling_ratio
-        )
+        output = _C.roi_align_forward(input, roi, spatial_scale, output_size[0], output_size[1], sampling_ratio)
         return output
 
     @staticmethod
     @once_differentiable
     def backward(ctx, grad_output):
-        rois, = ctx.saved_tensors
+        (rois,) = ctx.saved_tensors
         output_size = ctx.output_size
         spatial_scale = ctx.spatial_scale
         sampling_ratio = ctx.sampling_ratio
@@ -42,23 +40,23 @@ class _ROIAlign(Function):
         )
         return grad_input, None, None, None, None
 
+
 try:
     import torchvision
     from torchvision.ops import roi_align
 except:
     roi_align = _ROIAlign.apply
 
+
 class ROIAlign(nn.Module):
     def __init__(self, output_size, spatial_scale, sampling_ratio):
-        super(ROIAlign, self).__init__()
+        super().__init__()
         self.output_size = output_size
         self.spatial_scale = spatial_scale
         self.sampling_ratio = sampling_ratio
 
     def forward(self, input, rois):
-        return roi_align(
-            input, rois, self.output_size, self.spatial_scale, self.sampling_ratio
-        )
+        return roi_align(input, rois, self.output_size, self.spatial_scale, self.sampling_ratio)
 
     def __repr__(self):
         tmpstr = self.__class__.__name__ + "("
@@ -68,16 +66,22 @@ class ROIAlign(nn.Module):
         tmpstr += ")"
         return tmpstr
 
+
 class ROIAlignV2(nn.Module):
     def __init__(self, output_size, spatial_scale, sampling_ratio):
-        super(ROIAlignV2, self).__init__()
+        super().__init__()
         self.output_size = output_size
         self.spatial_scale = spatial_scale
         self.sampling_ratio = sampling_ratio
 
     def forward(self, input, rois):
         return torchvision.ops.roi_align(
-            input, rois, self.output_size, self.spatial_scale, self.sampling_ratio, aligned=True
+            input,
+            rois,
+            self.output_size,
+            self.spatial_scale,
+            self.sampling_ratio,
+            aligned=True,
         )
 
     def __repr__(self):

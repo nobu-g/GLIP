@@ -6,10 +6,10 @@ Utilities related to distributed mode.
 By default, the reduce of metrics and such are done on GPU, since it's more straightforward (we reuse the NCCL backend)
 If you want to reduce on CPU instead (required for big datasets like GQA), use the env variable MDETR_CPU_REDUCE=1
 """
+import datetime
 import functools
 import io
 import os
-import datetime
 
 import torch
 import torch.distributed as dist
@@ -17,7 +17,7 @@ import torch.distributed as dist
 _LOCAL_PROCESS_GROUP = None
 
 
-@functools.lru_cache()
+@functools.lru_cache
 def _get_global_gloo_group():
     """
     Return a process group based on gloo backend, containing all the ranks
@@ -28,6 +28,7 @@ def _get_global_gloo_group():
         return dist.new_group(backend="gloo")
 
     return dist.group.WORLD
+
 
 def all_gather(data):
     """
@@ -219,11 +220,14 @@ def init_distributed_mode(args):
 
     torch.cuda.set_device(args.gpu)
     args.dist_backend = "nccl"
-    print("| distributed init (rank {}): {}".format(args.rank, args.dist_url), flush=True)
+    print(f"| distributed init (rank {args.rank}): {args.dist_url}", flush=True)
 
     dist.init_process_group(
-        backend=args.dist_backend, init_method=args.dist_url, world_size=args.world_size, rank=args.rank,
-        timeout=datetime.timedelta(0, 7200)
+        backend=args.dist_backend,
+        init_method=args.dist_url,
+        world_size=args.world_size,
+        rank=args.rank,
+        timeout=datetime.timedelta(0, 7200),
     )
     dist.barrier()
     setup_for_distributed(args.debug or args.rank == 0)

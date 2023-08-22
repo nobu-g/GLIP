@@ -1,10 +1,10 @@
 from maskrcnn_benchmark.data import datasets
 
-from .coco import coco_evaluation
-from .voc import voc_evaluation
-from .vg import vg_evaluation
 from .box_aug import im_detect_bbox_aug
+from .coco import coco_evaluation
 from .od_to_grounding import od_to_grounding_evaluation
+from .vg import vg_evaluation
+from .voc import voc_evaluation
 
 
 def evaluate(dataset, predictions, output_folder, **kwargs):
@@ -18,9 +18,7 @@ def evaluate(dataset, predictions, output_folder, **kwargs):
     Returns:
         evaluation result
     """
-    args = dict(
-        dataset=dataset, predictions=predictions, output_folder=output_folder, **kwargs
-    )
+    args = dict(dataset=dataset, predictions=predictions, output_folder=output_folder, **kwargs)
     if isinstance(dataset, datasets.COCODataset) or isinstance(dataset, datasets.TSVDataset):
         return coco_evaluation(**args)
     # elif isinstance(dataset, datasets.VGTSVDataset):
@@ -33,14 +31,11 @@ def evaluate(dataset, predictions, output_folder, **kwargs):
         pass
     else:
         dataset_name = dataset.__class__.__name__
-        raise NotImplementedError("Unsupported dataset type {}.".format(dataset_name))
+        raise NotImplementedError(f"Unsupported dataset type {dataset_name}.")
 
 
 def evaluate_mdetr(dataset, predictions, output_folder, cfg):
-   
-    args = dict(
-        dataset=dataset, predictions=predictions, output_folder=output_folder, **kwargs
-    )
+    args = dict(dataset=dataset, predictions=predictions, output_folder=output_folder, **kwargs)
     if isinstance(dataset, datasets.COCODataset) or isinstance(dataset, datasets.TSVDataset):
         return coco_evaluation(**args)
     # elif isinstance(dataset, datasets.VGTSVDataset):
@@ -53,4 +48,4 @@ def evaluate_mdetr(dataset, predictions, output_folder, cfg):
         pass
     else:
         dataset_name = dataset.__class__.__name__
-        raise NotImplementedError("Unsupported dataset type {}.".format(dataset_name))
+        raise NotImplementedError(f"Unsupported dataset type {dataset_name}.")

@@ -1,10 +1,9 @@
 # Copyright (c) Facebook, Inc. and its affiliates. All Rights Reserved.
-from __future__ import division
 
 import torch
 
 
-class ImageList(object):
+class ImageList:
     """
     Structure that holds a list of images (of possibly
     varying sizes) as a single tensor.
@@ -67,4 +66,4 @@ def to_image_list(tensors, size_divisible=0):
 
         return ImageList(batched_imgs, image_sizes)
     else:
-        raise TypeError("Unsupported type for to_image_list: {}".format(type(tensors)))
+        raise TypeError(f"Unsupported type for to_image_list: {type(tensors)}")

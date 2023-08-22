@@ -61,10 +61,10 @@ _C.INPUT.MAX_SIZE_TEST = 1333
 # Values to be used for image normalization
 _C.INPUT.PIXEL_MEAN = [102.9801, 115.9465, 122.7717]
 # Values to be used for image normalization
-_C.INPUT.PIXEL_STD = [1., 1., 1.]
+_C.INPUT.PIXEL_STD = [1.0, 1.0, 1.0]
 # Convert image to BGR format (for Caffe2 models), in range 0-255
 _C.INPUT.TO_BGR255 = True
-_C.INPUT.FORMAT = ''
+_C.INPUT.FORMAT = ""
 _C.INPUT.FIX_RES = False
 
 # -----------------------------------------------------------------------------
@@ -102,7 +102,7 @@ _C.DATASETS.SAMPLE_RATIO = 0.0
 _C.DATASETS.FEW_SHOT = 0
 # SHUFFLE_SEED != 0 means shuffle the dataset in the few shot setting
 _C.DATASETS.SHUFFLE_SEED = 0
-_C.DATASETS.PREDEFINED_TEXT = ''
+_C.DATASETS.PREDEFINED_TEXT = ""
 _C.DATASETS.ALTERNATIVE_TRAINING = False
 _C.DATASETS.MULTISTAGE_TRAINING = False
 _C.DATASETS.REGISTER = CN(new_allowed=True)
@@ -448,7 +448,7 @@ _C.MODEL.DYHEAD.USE_SYNCBN = False
 _C.MODEL.DYHEAD.USE_DYFUSE = False
 _C.MODEL.DYHEAD.USE_DYRELU = False
 
-_C.MODEL.DYHEAD.CONV_FUNC = ''
+_C.MODEL.DYHEAD.CONV_FUNC = ""
 
 # CosineSimOutputLayers: https://github.com/ucbdrive/few-shot-object-detection/blob/master/fsdet/modeling/roi_heads/fast_rcnn.py#L448-L464
 _C.MODEL.DYHEAD.COSINE_SCALE = -1.0
@@ -481,7 +481,7 @@ _C.MODEL.DYHEAD.FUSE_CONFIG.DO_LANG_PROJ_OUTSIDE_CHECKPOINT = False
 
 _C.MODEL.DYHEAD.FUSE_CONFIG.USE_FUSED_FEATURES_DOT_PRODUCT = False
 
-# Controls for 
+# Controls for
 _C.MODEL.DYHEAD.FUSE_CONFIG.CLAMP_MIN_FOR_UNDERFLOW = False
 _C.MODEL.DYHEAD.FUSE_CONFIG.CLAMP_MAX_FOR_OVERFLOW = False
 _C.MODEL.DYHEAD.FUSE_CONFIG.CLAMP_BERTATTN_MIN_FOR_UNDERFLOW = False
@@ -494,7 +494,7 @@ _C.MODEL.DYHEAD.FUSE_CONFIG.MLM_LOSS_FOR_ONLY_POSITIVES = True
 _C.MODEL.DYHEAD.FUSE_CONFIG.NO_MASK_FOR_OD = False
 _C.MODEL.DYHEAD.FUSE_CONFIG.NO_MASK_FOR_GOLD = False
 _C.MODEL.DYHEAD.FUSE_CONFIG.MLM_LOSS_COEF = 1.0
-_C.MODEL.DYHEAD.FUSE_CONFIG.MLM_OBJ_FOR_ONLY_POSITIVE  = False
+_C.MODEL.DYHEAD.FUSE_CONFIG.MLM_OBJ_FOR_ONLY_POSITIVE = False
 
 # Shallow Contrastive Loss (FPN)
 _C.MODEL.DYHEAD.FUSE_CONFIG.USE_SHALLOW_CONTRASTIVE_LOSS = False
@@ -579,7 +579,7 @@ _C.MODEL.ROI_HEADS.FG_IOU_THRESHOLD = 0.5
 _C.MODEL.ROI_HEADS.BG_IOU_THRESHOLD = 0.5
 # Default weights on (dx, dy, dw, dh) for normalizing bbox regression targets
 # These are empirically chosen to approximately lead to unit variance targets
-_C.MODEL.ROI_HEADS.BBOX_REG_WEIGHTS = (10., 10., 5., 5.)
+_C.MODEL.ROI_HEADS.BBOX_REG_WEIGHTS = (10.0, 10.0, 5.0, 5.0)
 # RoI minibatch size *per image* (number of regions of interest [ROIs])
 # Total number of RoIs per training minibatch =
 #   TRAIN.BATCH_SIZE_PER_IM * TRAIN.IMS_PER_BATCH * NUM_GPUS
@@ -799,12 +799,12 @@ _C.SOLVER.SEED = 0
 _C.SOLVER.DISABLE_OUTPUT_DISTRIBUTED = False
 
 
-_C.SOLVER.PROMPT_PROBING_LEVEL = -1.0 
-# -1 means tuning the whole model; 
+_C.SOLVER.PROMPT_PROBING_LEVEL = -1.0
+# -1 means tuning the whole model;
 # 1 means tuning the whole language model; 1.5 means tuning the box head as well
 
 _C.SOLVER.FIND_UNUSED_PARAMETERS = True
-_C.SOLVER.DATASET_LENGTH = -1 # Just for logging purpose
+_C.SOLVER.DATASET_LENGTH = -1  # Just for logging purpose
 _C.SOLVER.TUNING_HIGHLEVEL_OVERRIDE = None
 _C.SOLVER.USE_EMA_FOR_MONITOR = False
 
@@ -827,10 +827,23 @@ _C.TEST.USE_MULTISCALE = False
 # _C.TEST.SCALES = (400, 600, 800, 1000, 1200, 1400)
 # _C.TEST.RANGES = ((96, 10000), (64, 10000), (0, 10000), (0, 10000), (0, 256), (0, 192))
 _C.TEST.SCALES = (400, 500, 600, 640, 700, 900, 1000, 1100, 1200, 1300, 1400, 1800)
-_C.TEST.RANGES = ((96, 10000), (96, 10000), (64, 10000), (64, 10000), (64, 10000), (0, 10000), (0, 10000), (0, 256), (0, 256), (0, 192), (0, 192), (0, 96))
+_C.TEST.RANGES = (
+    (96, 10000),
+    (96, 10000),
+    (64, 10000),
+    (64, 10000),
+    (64, 10000),
+    (0, 10000),
+    (0, 10000),
+    (0, 256),
+    (0, 256),
+    (0, 192),
+    (0, 192),
+    (0, 96),
+)
 _C.TEST.MAX_SIZE = 2500
 _C.TEST.FLIP = True
-_C.TEST.SPECIAL_NMS = 'none'  # ('none', 'soft-nms', 'vote', 'soft-vote')
+_C.TEST.SPECIAL_NMS = "none"  # ('none', 'soft-nms', 'vote', 'soft-vote')
 _C.TEST.TH = 0.6  # threshold for nms or vote
 _C.TEST.PRE_NMS_TOP_N = 1000
 _C.TEST.NUM_CLASSES = 81

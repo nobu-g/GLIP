@@ -1,11 +1,10 @@
-from torch import nn
-
 from maskrcnn_benchmark.modeling.make_layers import make_conv3x3
+from torch import nn
 
 
 class Residual(nn.Module):
     def __init__(self, inp_dim, out_dim, use_gn=False):
-        super(Residual, self).__init__()
+        super().__init__()
         self.relu = nn.ReLU()
         # self.bn1 = nn.BatchNorm2d(inp_dim)
         self.conv1 = make_conv3x3(inp_dim, int(out_dim / 2), 1, use_relu=False, use_gn=use_gn)
@@ -40,7 +39,7 @@ class Residual(nn.Module):
 
 class Hourglass(nn.Module):
     def __init__(self, n, f, gn=False, increase=0):
-        super(Hourglass, self).__init__()
+        super().__init__()
         nf = f + increase
         self.up1 = Residual(f, f)
         # Lower branch
@@ -49,11 +48,11 @@ class Hourglass(nn.Module):
         self.n = n
         # Recursive hourglass
         if self.n > 1:
-            self.low2 = Hourglass(n-1, nf, gn=gn)
+            self.low2 = Hourglass(n - 1, nf, gn=gn)
         else:
             self.low2 = Residual(nf, nf, gn)
         self.low3 = Residual(nf, f, gn)
-        self.up2 = nn.Upsample(scale_factor=2, mode='nearest')
+        self.up2 = nn.Upsample(scale_factor=2, mode="nearest")
 
     def forward(self, x):
         up1 = self.up1(x)

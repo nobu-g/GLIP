@@ -1,16 +1,15 @@
 # Copyright (c) Facebook, Inc. and its affiliates. All Rights Reserved.
 import torch
+from maskrcnn_benchmark.layers import Conv2d, ConvTranspose2d, _NewEmptyTensorOp
 from torch import nn
 from torch.nn import functional as F
 
-from maskrcnn_benchmark.layers import Conv2d, _NewEmptyTensorOp
-from maskrcnn_benchmark.layers import ConvTranspose2d
 from ...utils import permute_and_flatten
 
 
 class MaskRCNNC4Predictor(nn.Module):
     def __init__(self, cfg):
-        super(MaskRCNNC4Predictor, self).__init__()
+        super().__init__()
         # TODO: a hack for binary mask head
         # num_classes = cfg.MODEL.ROI_BOX_HEAD.NUM_CLASSES
         num_classes = 2
@@ -42,7 +41,7 @@ class MaskRCNNC4Predictor(nn.Module):
 
 class VLMaskRCNNC4Predictor(nn.Module):
     def __init__(self, cfg):
-        super(VLMaskRCNNC4Predictor, self).__init__()
+        super().__init__()
         dim_reduced = cfg.MODEL.ROI_MASK_HEAD.CONV_LAYERS[-1]
 
         if cfg.MODEL.ROI_HEADS.USE_FPN:
@@ -59,8 +58,7 @@ class VLMaskRCNNC4Predictor(nn.Module):
         log_scale = cfg.MODEL.DYHEAD.LOG_SCALE
         self.out_dim = cfg.MODEL.LANGUAGE_BACKBONE.MAX_QUERY_LEN
         self.dot_product_projection_image = nn.Identity()
-        self.dot_product_projection_text = nn.Linear(cfg.MODEL.LANGUAGE_BACKBONE.LANG_DIM,
-                                                     dim_reduced, bias=True)
+        self.dot_product_projection_text = nn.Linear(cfg.MODEL.LANGUAGE_BACKBONE.LANG_DIM, dim_reduced, bias=True)
         self.log_scale = nn.Parameter(torch.Tensor([log_scale]), requires_grad=True)
         self.bias_lang = nn.Parameter(torch.zeros(cfg.MODEL.LANGUAGE_BACKBONE.LANG_DIM), requires_grad=True)
 
@@ -92,9 +90,9 @@ class VLMaskRCNNC4Predictor(nn.Module):
         bias = dot_product_proj_tokens_bias.unsqueeze(1).repeat(1, A, 1)
 
         # dot product
-        dot_product_logit = (torch.matmul(dot_product_proj_queries,
-                                          dot_product_proj_tokens.transpose(-1,
-                                                                            -2)) / self.log_scale.exp()) + bias
+        dot_product_logit = (
+            torch.matmul(dot_product_proj_queries, dot_product_proj_tokens.transpose(-1, -2)) / self.log_scale.exp()
+        ) + bias
         # clamp for stability
         dot_product_logit = torch.clamp(dot_product_logit, max=50000)
         dot_product_logit = torch.clamp(dot_product_logit, min=-50000)
@@ -102,8 +100,10 @@ class VLMaskRCNNC4Predictor(nn.Module):
         return dot_product_logit
 
 
-_ROI_MASK_PREDICTOR = {"MaskRCNNC4Predictor": MaskRCNNC4Predictor,
-                       "VLMaskRCNNC4Predictor": VLMaskRCNNC4Predictor}
+_ROI_MASK_PREDICTOR = {
+    "MaskRCNNC4Predictor": MaskRCNNC4Predictor,
+    "VLMaskRCNNC4Predictor": VLMaskRCNNC4Predictor,
+}
 
 
 def make_roi_mask_predictor(cfg):

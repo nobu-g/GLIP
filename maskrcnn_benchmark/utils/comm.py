@@ -3,13 +3,14 @@ This file contains primitives for multi-gpu communication.
 This is useful when doing distributed training.
 """
 
-import pickle
-import time
 import functools
 import logging
+import pickle
+import time
+
+import numpy as np
 import torch
 import torch.distributed as dist
-import numpy as np
 
 
 def get_world_size():
@@ -152,6 +153,6 @@ def shared_random_seed():
 
     All workers must call this function, otherwise it will deadlock.
     """
-    ints = np.random.randint(2 ** 31)
+    ints = np.random.randint(2**31)
     all_ints = all_gather(ints)
     return all_ints[0]

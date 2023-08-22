@@ -4,28 +4,23 @@
 from maskrcnn_benchmark.utils.env import setup_environment  # noqa F401 isort:skip
 
 import argparse
+import datetime
+import functools
+import io
 import os
 
 import torch
+import torch.distributed as dist
 from maskrcnn_benchmark.config import cfg
 from maskrcnn_benchmark.data import make_data_loader
 from maskrcnn_benchmark.engine.inference import inference
 from maskrcnn_benchmark.modeling.detector import build_detection_model
 from maskrcnn_benchmark.utils.checkpoint import DetectronCheckpointer
 from maskrcnn_benchmark.utils.collect_env import collect_env_info
-from maskrcnn_benchmark.utils.comm import synchronize, get_rank
+from maskrcnn_benchmark.utils.comm import get_rank, synchronize
 from maskrcnn_benchmark.utils.logger import setup_logger
 from maskrcnn_benchmark.utils.miscellaneous import mkdir
 from maskrcnn_benchmark.utils.stats import get_model_complexity_info
- 
-import os
-import functools
-import io
-import os
-import datetime
-
-import torch
-import torch.distributed as dist
 
 
 def init_distributed_mode(args):
@@ -42,18 +37,22 @@ def init_distributed_mode(args):
         args.distributed = False
         return
 
-    #args.distributed = True
+    # args.distributed = True
 
     torch.cuda.set_device(args.gpu)
     args.dist_backend = "nccl"
-    print("| distributed init (rank {}): {}".format(args.rank, args.dist_url), flush=True)
+    print(f"| distributed init (rank {args.rank}): {args.dist_url}", flush=True)
 
     dist.init_process_group(
-        backend=args.dist_backend, init_method=args.dist_url, world_size=args.world_size, rank=args.rank,
-        timeout=datetime.timedelta(0, 7200)
+        backend=args.dist_backend,
+        init_method=args.dist_url,
+        world_size=args.world_size,
+        rank=args.rank,
+        timeout=datetime.timedelta(0, 7200),
     )
     dist.barrier()
     setup_for_distributed(args.rank == 0)
+
 
 def setup_for_distributed(is_master):
     """
@@ -69,6 +68,7 @@ def setup_for_distributed(is_master):
             builtin_print(*args, **kwargs)
 
     __builtin__.print = print
+
 
 def main():
     parser = argparse.ArgumentParser(description="PyTorch Detection to Grounding Inference")
@@ -89,7 +89,7 @@ def main():
         "opts",
         help="Modify config options using the command-line",
         default=None,
-        nargs=argparse.REMAINDER
+        nargs=argparse.REMAINDER,
     )
     parser.add_argument("--world-size", default=1, type=int, help="number of distributed processes")
     parser.add_argument("--dist-url", default="env://", help="url used to set up distributed training")
@@ -124,7 +124,7 @@ def main():
 
     logger = setup_logger("maskrcnn_benchmark", log_dir, get_rank())
     logger.info(args)
-    logger.info("Using {} GPUs".format(num_gpus))
+    logger.info(f"Using {num_gpus} GPUs")
     logger.info(cfg)
 
     # logger.info("Collecting env info (might take some time)")
@@ -168,22 +168,25 @@ def main():
                     output_folders[idx] = output_folder
                 data_loaders_val = make_data_loader(cfg_, is_train=False, is_distributed=distributed)
 
-                for output_folder, dataset_name, data_loader_val in zip(output_folders, dataset_names, data_loaders_val):
+                for output_folder, dataset_name, data_loader_val in zip(
+                    output_folders, dataset_names, data_loaders_val
+                ):
                     inference(
                         model,
                         data_loader_val,
                         dataset_name=dataset_name,
                         iou_types=iou_types,
-                        box_only=cfg_.MODEL.RPN_ONLY and (cfg_.MODEL.RPN_ARCHITECTURE == "RPN" or cfg_.DATASETS.CLASS_AGNOSTIC),
+                        box_only=cfg_.MODEL.RPN_ONLY
+                        and (cfg_.MODEL.RPN_ARCHITECTURE == "RPN" or cfg_.DATASETS.CLASS_AGNOSTIC),
                         device=cfg_.MODEL.DEVICE,
                         expected_results=cfg_.TEST.EXPECTED_RESULTS,
                         expected_results_sigma_tol=cfg_.TEST.EXPECTED_RESULTS_SIGMA_TOL,
                         output_folder=output_folder,
-                        cfg=cfg_
+                        cfg=cfg_,
                     )
                     synchronize()
                 # logger.info("FLOPs: {}, #Parameter: {}".format(params, flops))
-    
+
     else:
         iou_types = ("bbox",)
         if cfg.MODEL.MASK_ON:
@@ -207,16 +210,17 @@ def main():
                     data_loader_val,
                     dataset_name=dataset_name,
                     iou_types=iou_types,
-                    box_only=cfg.MODEL.RPN_ONLY and (cfg.MODEL.RPN_ARCHITECTURE == "RPN" or cfg.DATASETS.CLASS_AGNOSTIC),
+                    box_only=cfg.MODEL.RPN_ONLY
+                    and (cfg.MODEL.RPN_ARCHITECTURE == "RPN" or cfg.DATASETS.CLASS_AGNOSTIC),
                     device=cfg.MODEL.DEVICE,
                     expected_results=cfg.TEST.EXPECTED_RESULTS,
                     expected_results_sigma_tol=cfg.TEST.EXPECTED_RESULTS_SIGMA_TOL,
                     output_folder=output_folder,
-                    cfg=cfg
+                    cfg=cfg,
                 )
                 synchronize()
             # logger.info("FLOPs: {}, #Parameter: {}".format(params, flops))
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

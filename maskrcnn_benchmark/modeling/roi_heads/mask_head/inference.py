@@ -1,10 +1,9 @@
 # Copyright (c) Facebook, Inc. and its affiliates. All Rights Reserved.
 import numpy as np
 import torch
-from torch import nn
 import torch.nn.functional as F
-
 from maskrcnn_benchmark.structures.bounding_box import BoxList
+from torch import nn
 
 
 def convert_mask_grounding_to_od_logits(logits, positive_map_label_to_token, num_classes):
@@ -29,7 +28,7 @@ class MaskPostProcessor(nn.Module):
     """
 
     def __init__(self, masker=None, mdetr_style_aggregate_class_num=None, vl_version=None):
-        super(MaskPostProcessor, self).__init__()
+        super().__init__()
         self.masker = masker
         self.mdetr_style_aggregate_class_num = mdetr_style_aggregate_class_num
         self.vl_version = vl_version
@@ -46,7 +45,9 @@ class MaskPostProcessor(nn.Module):
                 the extra field mask
         """
         if self.vl_version:
-            mask_prob = convert_mask_grounding_to_od_logits(x, positive_map_label_to_token, self.mdetr_style_aggregate_class_num)
+            mask_prob = convert_mask_grounding_to_od_logits(
+                x, positive_map_label_to_token, self.mdetr_style_aggregate_class_num
+            )
         else:
             mask_prob = x.sigmoid()
 
@@ -86,16 +87,13 @@ class MaskPostProcessorCOCOFormat(MaskPostProcessor):
     """
 
     def forward(self, x, boxes, positive_map_label_to_token=None, vl_version=None):
-        import pycocotools.mask as mask_util
         import numpy as np
+        import pycocotools.mask as mask_util
 
-        results = super(MaskPostProcessorCOCOFormat, self).forward(x, boxes)
+        results = super().forward(x, boxes)
         for result in results:
             masks = result.get_field("mask").cpu()
-            rles = [
-                mask_util.encode(np.array(mask[0, :, :, np.newaxis], order="F"))[0]
-                for mask in masks
-            ]
+            rles = [mask_util.encode(np.array(mask[0, :, :, np.newaxis], order="F"))[0] for mask in masks]
             for rle in rles:
                 rle["counts"] = rle["counts"].decode("utf-8")
             result.add_field("mask", rles)
@@ -106,10 +104,10 @@ class MaskPostProcessorCOCOFormat(MaskPostProcessor):
 # but are kept here for the moment while we need them
 # temporarily gor paste_mask_in_image
 def expand_boxes(boxes, scale):
-    w_half = (boxes[:, 2] - boxes[:, 0]) * .5
-    h_half = (boxes[:, 3] - boxes[:, 1]) * .5
-    x_c = (boxes[:, 2] + boxes[:, 0]) * .5
-    y_c = (boxes[:, 3] + boxes[:, 1]) * .5
+    w_half = (boxes[:, 2] - boxes[:, 0]) * 0.5
+    h_half = (boxes[:, 3] - boxes[:, 1]) * 0.5
+    x_c = (boxes[:, 2] + boxes[:, 0]) * 0.5
+    y_c = (boxes[:, 3] + boxes[:, 1]) * 0.5
 
     w_half *= scale
     h_half *= scale
@@ -149,7 +147,7 @@ def paste_mask_in_image(mask, box, im_h, im_w, thresh=0.5, padding=1):
 
     # Resize mask
     mask = mask.to(torch.float32)
-    mask = F.interpolate(mask, size=(h, w), mode='bilinear', align_corners=False)
+    mask = F.interpolate(mask, size=(h, w), mode="bilinear", align_corners=False)
     mask = mask[0][0]
 
     if thresh >= 0:
@@ -165,13 +163,11 @@ def paste_mask_in_image(mask, box, im_h, im_w, thresh=0.5, padding=1):
     y_0 = max(box[1], 0)
     y_1 = min(box[3] + 1, im_h)
 
-    im_mask[y_0:y_1, x_0:x_1] = mask[
-        (y_0 - box[1]) : (y_1 - box[1]), (x_0 - box[0]) : (x_1 - box[0])
-    ]
+    im_mask[y_0:y_1, x_0:x_1] = mask[(y_0 - box[1]) : (y_1 - box[1]), (x_0 - box[0]) : (x_1 - box[0])]
     return im_mask
 
 
-class Masker(object):
+class Masker:
     """
     Projects a set of masks in an image on the locations
     specified by the bounding boxes
@@ -218,7 +214,9 @@ def make_roi_mask_post_processor(cfg):
     else:
         masker = None
     mdetr_style_aggregate_class_num = cfg.TEST.MDETR_STYLE_AGGREGATE_CLASS_NUM
-    mask_post_processor = MaskPostProcessor(masker,
-                                            mdetr_style_aggregate_class_num,
-                                            vl_version=cfg.MODEL.ROI_MASK_HEAD.PREDICTOR.startswith("VL"))
+    mask_post_processor = MaskPostProcessor(
+        masker,
+        mdetr_style_aggregate_class_num,
+        vl_version=cfg.MODEL.ROI_MASK_HEAD.PREDICTOR.startswith("VL"),
+    )
     return mask_post_processor

@@ -1,12 +1,10 @@
 from collections import OrderedDict
+
 import torch
+from maskrcnn_benchmark.modeling import registry
 from torch import nn
 
-from maskrcnn_benchmark.modeling import registry
-from . import bert_model
-from . import rnn_model
-from . import clip_model
-from . import word_utils
+from . import bert_model, clip_model, rnn_model, word_utils
 
 
 @registry.LANGUAGE_BACKBONES.register("bert-base-uncased")
@@ -38,8 +36,9 @@ def build_clip_backbone(cfg):
 
 
 def build_backbone(cfg):
-    assert cfg.MODEL.LANGUAGE_BACKBONE.MODEL_TYPE in registry.LANGUAGE_BACKBONES, \
-        "cfg.MODEL.LANGUAGE_BACKBONE.TYPE: {} is not registered in registry".format(
-            cfg.MODEL.LANGUAGE_BACKBONE.MODEL_TYPE
-        )
+    assert (
+        cfg.MODEL.LANGUAGE_BACKBONE.MODEL_TYPE in registry.LANGUAGE_BACKBONES
+    ), "cfg.MODEL.LANGUAGE_BACKBONE.TYPE: {} is not registered in registry".format(
+        cfg.MODEL.LANGUAGE_BACKBONE.MODEL_TYPE
+    )
     return registry.LANGUAGE_BACKBONES[cfg.MODEL.LANGUAGE_BACKBONE.MODEL_TYPE](cfg)

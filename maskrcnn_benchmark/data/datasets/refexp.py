@@ -1,6 +1,4 @@
 import copy
-from collections import defaultdict
-from pathlib import Path
 
 import maskrcnn_benchmark.utils.dist as dist
 import torch

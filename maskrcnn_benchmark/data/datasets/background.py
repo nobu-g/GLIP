@@ -4,7 +4,6 @@ import os.path
 
 import torch
 import torch.utils.data as data
-import torchvision
 from maskrcnn_benchmark.structures.bounding_box import BoxList
 from PIL import Image
 

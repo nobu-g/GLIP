@@ -1,11 +1,11 @@
 import math
 import random
-from typing import Iterator, Optional, TypeVar
+from typing import Optional
 
 import numpy as np
 import torch
 import torch.distributed as dist
-from torch.utils.data import Dataset, Sampler
+from torch.utils.data import Dataset
 
 
 class DistributedSamplerChunkByNode(torch.utils.data.Sampler):

@@ -1,6 +1,3 @@
-import json
-import os
-import os.path as osp
 import xml.etree.ElementTree as ET
 from collections import defaultdict
 from pathlib import Path
@@ -8,8 +5,6 @@ from typing import Any, Dict, List, Optional, Sequence, Tuple, Union
 
 import maskrcnn_benchmark.utils.mdetr_dist as dist
 import numpy as np
-from maskrcnn_benchmark.structures.bounding_box import BoxList
-from maskrcnn_benchmark.structures.boxlist_ops import boxlist_iou
 from prettytable import PrettyTable
 
 #### The following loading utilities are imported from

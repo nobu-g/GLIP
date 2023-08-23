@@ -1,19 +1,14 @@
-import json
 import logging
-import math
 import os
 import os.path
-import pdb
-import random
 
-import numpy as np
 import torch
 import torch.utils.data as data
 import torchvision
 from maskrcnn_benchmark.data.datasets.coco import has_valid_annotation
 from maskrcnn_benchmark.structures.bounding_box import BoxList
 from maskrcnn_benchmark.structures.segmentation_mask import SegmentationMask
-from PIL import Image, ImageDraw
+from PIL import Image
 from pycocotools import mask as coco_mask
 
 from .od_to_grounding import (

@@ -1,11 +1,10 @@
 import os
 import os.path
-from pathlib import Path
-from typing import Any, Callable, Optional, Tuple
+from typing import Callable, Optional
 
 import torch
 from maskrcnn_benchmark.structures.bounding_box import BoxList
-from PIL import Image, ImageDraw
+from PIL import Image
 from torchvision.datasets.vision import VisionDataset
 
 from .modulated_coco import ConvertCocoPolysToMask, has_valid_annotation

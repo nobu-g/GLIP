@@ -6,8 +6,6 @@ import time
 from collections import defaultdict
 
 import pycocotools.mask as mask_utils
-import torchvision
-from PIL import Image
 
 
 def _isArrayLike(obj):

@@ -4,14 +4,6 @@ COCO dataset which returns image_id for evaluation.
 Mostly copy-paste from https://github.com/pytorch/vision/blob/13b35ff/references/detection/coco_utils.py
 """
 
-import json
-import random
-
-import torch
-from maskrcnn_benchmark.structures.bounding_box import BoxList
-from PIL import Image, ImageDraw
-from pycocotools.coco import COCO
-
 from .modulated_coco import ConvertCocoPolysToMask
 from .od_to_grounding import (
     check_for_positive_overflow,

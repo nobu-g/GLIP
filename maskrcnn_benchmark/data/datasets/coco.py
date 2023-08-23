@@ -2,18 +2,15 @@
 import math
 import os
 import os.path
-import pdb
-import random
 
 import numpy as np
 import torch
 import torch.utils.data as data
-import torchvision
 from maskrcnn_benchmark.config import cfg
 from maskrcnn_benchmark.structures.bounding_box import BoxList
 from maskrcnn_benchmark.structures.keypoint import PersonKeypoints
 from maskrcnn_benchmark.structures.segmentation_mask import SegmentationMask
-from PIL import Image, ImageDraw
+from PIL import Image
 
 
 def _count_visible_keypoints(anno):

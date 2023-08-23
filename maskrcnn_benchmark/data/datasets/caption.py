@@ -1,17 +1,14 @@
-import pdb
 import random
-import time
 
 import numpy as np
 import torch
 import torch.distributed as dist
 from maskrcnn_benchmark.structures.bounding_box import BoxList
-from PIL import Image, ImageDraw
 from torchvision.ops import nms
 
 from .modulated_coco import ConvertCocoPolysToMask
 from .od_to_grounding import sanity_check_target_after_processing
-from .tsv import ODTSVDataset, TSVYamlDataset
+from .tsv import TSVYamlDataset
 
 
 class CaptionTSV(TSVYamlDataset):

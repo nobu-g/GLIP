@@ -8,8 +8,7 @@ import os
 import os.path as op
 
 import yaml
-from maskrcnn_benchmark.structures.bounding_box import BoxList
-from PIL import Image, ImageDraw
+from PIL import Image
 
 from .box_label_loader import LabelLoader
 

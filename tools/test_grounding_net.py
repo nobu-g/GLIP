@@ -7,16 +7,16 @@ import os
 
 import torch
 import torch.distributed as dist
-
 from maskrcnn_benchmark.config import cfg
 from maskrcnn_benchmark.data import make_data_loader
 from maskrcnn_benchmark.engine.inference import inference
 from maskrcnn_benchmark.modeling.detector import build_detection_model
 from maskrcnn_benchmark.utils.checkpoint import DetectronCheckpointer
 from maskrcnn_benchmark.utils.comm import get_rank, synchronize
-from maskrcnn_benchmark.utils.env import setup_environment  # noqa F401 isort:skip
 from maskrcnn_benchmark.utils.logger import setup_logger
 from maskrcnn_benchmark.utils.miscellaneous import mkdir
+
+from maskrcnn_benchmark.utils.env import setup_environment  # noqa F401 isort:skip
 
 
 def init_distributed_mode(args):

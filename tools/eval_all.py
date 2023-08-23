@@ -6,17 +6,17 @@ import argparse
 import os
 
 import torch
-
 from maskrcnn_benchmark.config import cfg
 from maskrcnn_benchmark.modeling.detector import build_detection_model
 from maskrcnn_benchmark.utils.checkpoint import DetectronCheckpointer
 from maskrcnn_benchmark.utils.collect_env import collect_env_info
 from maskrcnn_benchmark.utils.comm import get_rank
-# NOTE: this should be the first import (no not reorder)
-from maskrcnn_benchmark.utils.env import setup_environment  # noqa F401 isort:skip
 from maskrcnn_benchmark.utils.logger import setup_logger
 from maskrcnn_benchmark.utils.miscellaneous import mkdir
 from tools.test_net import run_test
+
+# NOTE: this should be the first import (no not reorder)
+from maskrcnn_benchmark.utils.env import setup_environment  # noqa F401 isort:skip
 
 
 def main():

@@ -13,8 +13,8 @@ class Background(data.Dataset):
 
     Args:
         root (string): Root directory where images are downloaded to.
-        annFile (string): Path to json annotation file.
-        transform (callable, optional): A function/transform that  takes in an PIL image
+        ann_file (string): Path to json annotation file.
+        transforms (callable, optional): A function/transform that  takes in an PIL image
             and returns a transformed version. E.g, ``transforms.ToTensor``
     """
 

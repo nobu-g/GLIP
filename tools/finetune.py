@@ -10,7 +10,6 @@ import pdb
 import shutil
 
 import torch
-
 from maskrcnn_benchmark.config import cfg, try_to_find
 from maskrcnn_benchmark.data import make_data_loader
 from maskrcnn_benchmark.engine.alter_trainer import do_train as alternative_train
@@ -21,12 +20,13 @@ from maskrcnn_benchmark.modeling.detector import build_detection_model
 from maskrcnn_benchmark.solver import make_lr_scheduler, make_optimizer
 from maskrcnn_benchmark.utils.checkpoint import DetectronCheckpointer
 from maskrcnn_benchmark.utils.comm import get_rank, is_main_process, synchronize
-# Set up custom environment before nearly anything else is imported
-# NOTE: this should be the first import (no not reorder)
-from maskrcnn_benchmark.utils.env import setup_environment  # noqa F401 isort:skip
 from maskrcnn_benchmark.utils.logger import setup_logger
 from maskrcnn_benchmark.utils.metric_logger import MetricLogger
 from maskrcnn_benchmark.utils.miscellaneous import mkdir, save_config
+
+# Set up custom environment before nearly anything else is imported
+# NOTE: this should be the first import (no not reorder)
+from maskrcnn_benchmark.utils.env import setup_environment  # noqa F401 isort:skip
 
 
 def removekey(d, prefix):

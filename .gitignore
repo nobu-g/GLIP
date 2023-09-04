@@ -1,9 +1,10 @@
 *.egg-info
 *.pyc
 build/
-DATASET/
-OUTPUT/
-MODEL/
+DATASET
+OUTPUT
+MODEL
+result
 
 # compilation and distribution
 __pycache__

@@ -21,7 +21,7 @@ from maskrcnn_benchmark.solver import make_lr_scheduler, make_optimizer
 from maskrcnn_benchmark.utils.checkpoint import DetectronCheckpointer
 from maskrcnn_benchmark.utils.comm import get_rank, is_main_process, synchronize
 from maskrcnn_benchmark.utils.logger import setup_logger
-from maskrcnn_benchmark.utils.metric_logger import MetricLogger
+from maskrcnn_benchmark.utils.metric_logger import MetricLogger, TensorboardLogger
 from maskrcnn_benchmark.utils.miscellaneous import mkdir, save_config
 
 # Set up custom environment before nearly anything else is imported
@@ -48,6 +48,7 @@ def train(
     zero_shot,
     skip_optimizer_resume=False,
     save_config_path=None,
+    use_tensorboard=False,
 ):
     data_loader = make_data_loader(
         cfg,
@@ -140,7 +141,10 @@ def train(
         checkpointer._load_model(state_dict)
 
     checkpoint_period = cfg.SOLVER.CHECKPOINT_PERIOD
-    meters = MetricLogger(delimiter="  ")
+    if use_tensorboard:
+        meters = TensorboardLogger(log_dir=cfg.OUTPUT_DIR, start_iter=arguments["iteration"], delimiter="  ")
+    else:
+        meters = MetricLogger(delimiter="  ")
 
     if zero_shot:
         return model
@@ -176,7 +180,6 @@ def train(
             arguments,
         )
     else:
-        meters = MetricLogger(delimiter="  ")
         do_train(
             cfg,
             model,
@@ -324,6 +327,13 @@ def main():
         dest="skip_test",
         help="Do not test the final model",
         action="store_true",
+    )
+    parser.add_argument(
+        "--use-tensorboard",
+        dest="use_tensorboard",
+        help="Use tensorboardX logger (Requires tensorboardX installed)",
+        action="store_true",
+        default=False,
     )
     parser.add_argument(
         "opts",
@@ -488,6 +498,7 @@ def main():
                     args.skip_train or custom_shot == 10000,
                     skip_optimizer_resume=args.skip_optimizer_resume,
                     save_config_path=output_config_path,
+                    use_tensorboard=args.use_tensorboard,
                 )
 
                 if not args.skip_test:

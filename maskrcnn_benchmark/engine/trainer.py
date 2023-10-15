@@ -291,7 +291,7 @@ def do_train(
                             output = model(images)
                         else:
                             captions = [t.get_field("caption") for t in targets if "caption" in t.fields()]
-                            output = model(images, captions, positive_map)
+                            output = model(images, captions=captions, positive_map=positive_map)
                         output = [o.to(cpu_device) for o in output]
                     results_dict.update({img_id: result for img_id, result in zip(image_ids, output)})
                 all_predictions = all_gather(results_dict)

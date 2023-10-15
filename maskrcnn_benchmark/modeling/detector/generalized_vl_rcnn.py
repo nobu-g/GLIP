@@ -233,7 +233,6 @@ class GeneralizedVLRCNN(nn.Module):
             # language embedding
             language_dict_features = {}
             if captions is not None:
-                # print(captions[0])
                 tokenized = self.tokenizer.batch_encode_plus(
                     captions,
                     max_length=self.cfg.MODEL.LANGUAGE_BACKBONE.MAX_QUERY_LEN,
@@ -308,11 +307,11 @@ class GeneralizedVLRCNN(nn.Module):
                 _, proposal_losses, fused_visual_features = self.rpn(
                     images,
                     visual_features,
-                    targets,
-                    language_dict_features,
-                    positive_map,
-                    captions,
-                    swint_feature_c4,
+                    targets=targets,
+                    language_dict_features=language_dict_features,
+                    positive_map=positive_map,
+                    captions=captions,
+                    swint_feature_c4=swint_feature_c4,
                 )
             elif self.training:
                 null_loss = 0

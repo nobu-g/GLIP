@@ -707,6 +707,8 @@ class ATSSPostProcessor(torch.nn.Module):
         dot_product_logits=None,
         positive_map=None,
     ):
+        if positive_map is not None:
+            positive_map = positive_map.long()
         sampled_boxes = []
         anchors = list(zip(*anchors))
         for idx, (b, c, a) in enumerate(zip(box_regression, centerness, anchors)):
@@ -764,11 +766,11 @@ def convert_grounding_to_od_logits(logits, box_cls, positive_map, score_agg=None
         # score aggregation method
         if score_agg == "MEAN":
             for label_j in positive_map:
-                scores[:, :, label_j - 1] = logits[:, :, torch.LongTensor(positive_map[label_j])].mean(-1)
+                scores[:, :, label_j - 1] = logits[:, :, positive_map[label_j]].mean(-1)
         elif score_agg == "MAX":
             # torch.max() returns (values, indices)
             for label_j in positive_map:
-                scores[:, :, label_j - 1] = logits[:, :, torch.LongTensor(positive_map[label_j])].max(-1)[0]
+                scores[:, :, label_j - 1] = logits[:, :, positive_map[label_j]].max(-1)[0]
         elif score_agg == "ONEHOT":
             # one hot
             scores = logits[:, :, : len(positive_map)]
@@ -787,24 +789,20 @@ def convert_grounding_to_od_logits_v2(logits, num_class, positive_map, score_agg
                 locations_label_j = positive_map[label_j]
                 if isinstance(locations_label_j, int):
                     locations_label_j = [locations_label_j]
-                scores[:, :, label_j if disable_minus_one else label_j - 1] = logits[
-                    :, :, torch.LongTensor(locations_label_j)
-                ].mean(-1)
+                scores[:, :, label_j if disable_minus_one else label_j - 1] = logits[:, :, locations_label_j].mean(-1)
         elif score_agg == "POWER":
             for label_j in positive_map:
                 locations_label_j = positive_map[label_j]
                 if isinstance(locations_label_j, int):
                     locations_label_j = [locations_label_j]
 
-                probability = torch.prod(logits[:, :, torch.LongTensor(locations_label_j)], dim=-1).squeeze(-1)
+                probability = torch.prod(logits[:, :, locations_label_j], dim=-1).squeeze(-1)
                 probability = torch.pow(probability, 1 / len(locations_label_j))
                 scores[:, :, label_j if disable_minus_one else label_j - 1] = probability
         elif score_agg == "MAX":
             # torch.max() returns (values, indices)
             for label_j in positive_map:
-                scores[:, :, label_j if disable_minus_one else label_j - 1] = logits[
-                    :, :, torch.LongTensor(positive_map[label_j])
-                ].max(-1)[0]
+                scores[:, :, label_j if disable_minus_one else label_j - 1] = logits[:, :, positive_map[label_j]].max(-1)[0]
         elif score_agg == "ONEHOT":
             # one hot
             scores = logits[:, :, : len(positive_map)]

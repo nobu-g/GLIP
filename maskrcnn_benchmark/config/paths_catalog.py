@@ -57,6 +57,22 @@ class DatasetCatalog:
             "ann_file": "mdetr_annotations/final_flickr_separateGT_test.json",
             "is_train": False,
         },
+        # Flicker30k Entities Ja
+        "flickr30k_ja_train": {
+            "img_folder": "flickr30k/flickr30k_images/train",
+            "ann_file": "mdetr_annotations_ja/final_flickr_separateGT_train.json",
+            "is_train": True,
+        },
+        "flickr30k_ja_val": {
+            "img_folder": "flickr30k/flickr30k_images/val",
+            "ann_file": "mdetr_annotations_ja/final_flickr_separateGT_val.json",
+            "is_train": False,
+        },
+        "flickr30k_ja_test": {
+            "img_folder": "flickr30k/flickr30k_images/test",
+            "ann_file": "mdetr_annotations_ja/final_flickr_separateGT_test.json",
+            "is_train": False,
+        },
         # refcoco
         "refexp_all_val": {
             "img_dir": "refcoco/train2014",

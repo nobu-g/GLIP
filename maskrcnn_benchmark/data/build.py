@@ -79,9 +79,9 @@ def build_dataset(
         args["transforms"] = transforms
         args.update(extra_args)
 
-        if dataset_name == "flickr30k_train":
+        if dataset_name in ("flickr30k_train", "flickr30k_ja_train"):
             copy = cfg.DATASETS.FLICKR_COPY
-        elif dataset_name in ["mixed_train", "mixed_train_no_coco"]:
+        elif dataset_name in ("mixed_train", "mixed_train_no_coco"):
             copy = cfg.DATASETS.MIXED_COPY
         elif dataset_name == "COCO_odinw_train_8copy_dt_train":
             copy = cfg.DATASETS.COCO_COPY

@@ -289,11 +289,10 @@ class BertEncoderLayer(BertPreTrainedModel):
         hidden_states = language_dict_features["hidden"]
         attention_mask = language_dict_features["masks"]
 
-        device = hidden_states.device
         input_shape = hidden_states.size()[:-1]
         # We can provide a self-attention mask of dimensions [batch_size, from_seq_length, to_seq_length]
         # ourselves in which case we just need to make it broadcastable to all heads.
-        extended_attention_mask = self.get_extended_attention_mask(attention_mask, input_shape, device)
+        extended_attention_mask = self.get_extended_attention_mask(attention_mask, input_shape)
 
         self_attention_outputs = self.attention(
             hidden_states,

@@ -4,7 +4,6 @@ build/
 DATASET
 OUTPUT
 MODEL
-result
 
 # compilation and distribution
 __pycache__

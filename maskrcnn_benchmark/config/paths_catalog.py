@@ -73,6 +73,22 @@ class DatasetCatalog:
             "ann_file": "mdetr_annotations_ja/final_flickr_separateGT_test.json",
             "is_train": False,
         },
+        # J-Cre3
+        "flickr30k_jcre3_train": {
+            "img_folder": "jcre3/images/train",
+            "ann_file": "mdetr_annotations_ja/final_jcre3_separateGT_train.json",
+            "is_train": True,
+        },
+        "flickr30k_jcre3_val": {
+            "img_folder": "jcre3/images/val",
+            "ann_file": "mdetr_annotations_ja/final_jcre3_separateGT_val.json",
+            "is_train": False,
+        },
+        "flickr30k_jcre3_test": {
+            "img_folder": "jcre3/images/test",
+            "ann_file": "mdetr_annotations_ja/final_jcre3_separateGT_test.json",
+            "is_train": False,
+        },
         # refcoco
         "refexp_all_val": {
             "img_dir": "refcoco/train2014",

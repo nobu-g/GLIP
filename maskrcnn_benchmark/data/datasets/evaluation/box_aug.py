@@ -1,3 +1,4 @@
+from typing import List
 import numpy as np
 import torch
 from maskrcnn_benchmark.config import cfg
@@ -8,7 +9,7 @@ from maskrcnn_benchmark.structures.boxlist_ops import cat_boxlist
 from maskrcnn_benchmark.structures.image_list import to_image_list
 
 
-def im_detect_bbox_aug(model, images, device, captions=None, positive_map_label_to_token=None):
+def im_detect_bbox_aug(model, images, device, captions=None, positive_map_label_to_token=None) -> List[BoxList]:
     # Collect detections computed under different transformations
     boxlists_ts = []
     for _ in range(len(images)):
@@ -198,9 +199,9 @@ def remove_boxes(boxlist_ts, min_scale, max_scale):
     return new_boxlist_ts
 
 
-def merge_result_from_multi_scales(boxlists):
+def merge_result_from_multi_scales(boxlists: List[BoxList]) -> List[BoxList]:
     num_images = len(boxlists)
-    results = []
+    results: List[BoxList] = []
     for i in range(num_images):
         scores = boxlists[i].get_field("scores")
         labels = boxlists[i].get_field("labels")

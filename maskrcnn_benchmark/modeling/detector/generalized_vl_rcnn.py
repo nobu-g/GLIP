@@ -288,7 +288,7 @@ class GeneralizedVLRCNN(nn.Module):
             inputs = {"img": images.tensors, "lang": language_dict_features}
             visual_features, language_dict_features, swint_feature_c4 = self.backbone(inputs)
         else:
-            visual_features = self.backbone(images.tensors)
+            visual_features: tuple = self.backbone(images.tensors)
 
         # rpn force boxes
         if targets:
@@ -319,6 +319,7 @@ class GeneralizedVLRCNN(nn.Module):
                     null_loss += 0.0 * param.sum()
                 proposal_losses = {("rpn_null_loss", null_loss)}
         else:
+            # ここで visual features と language features を cross attention で混ぜる🧬
             proposals, proposal_losses, fused_visual_features = self.rpn(
                 images,
                 visual_features,

@@ -331,7 +331,7 @@ class Flickr30kEntitiesRecallEvaluator:
         if verbose:
             print(f"There are {tot_phrases} phrases in {len(self.all_ids)} sentences to evaluate")
 
-    def evaluate(self, predictions: List[Dict]):
+    def evaluate(self, predictions: List[Dict[str, Any]]):
         evaluated_ids = set()
 
         recall_tracker = RecallTracker(self.topk)
@@ -356,12 +356,11 @@ class Flickr30kEntitiesRecallEvaluator:
 
             evaluated_ids.add(cur_id)
 
-            pred_boxes = pred["boxes"]
+            pred_boxes: List[List[List[float]]] = pred["boxes"]
             if str(pred["image_id"]) not in self.imgid2sentences:
                 raise RuntimeError(f"Unknown image id {pred['image_id']}")
             if not 0 <= int(pred["sentence_id"]) < len(self.imgid2sentences[str(pred["image_id"])]):
                 raise RuntimeError(f"Unknown sentence id {pred['sentence_id']}" f" in image {pred['image_id']}")
-            target_sentence = self.imgid2sentences[str(pred["image_id"])][int(pred["sentence_id"])]
 
             phrases = self.imgid2sentences[str(pred["image_id"])][int(pred["sentence_id"])]
             if len(pred_boxes) != len(phrases):
@@ -371,7 +370,7 @@ class Flickr30kEntitiesRecallEvaluator:
                 )
 
             for cur_boxes, phrase in zip(pred_boxes, phrases):
-                target_boxes = self.imgid2boxes[str(pred["image_id"])][phrase["phrase_id"]]
+                target_boxes: List[List[int]] = self.imgid2boxes[str(pred["image_id"])][phrase["phrase_id"]]
 
                 ious = box_iou(np.asarray(cur_boxes), np.asarray(target_boxes))
                 for k in self.topk:

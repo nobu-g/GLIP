@@ -1,4 +1,7 @@
+from typing import List
+
 from maskrcnn_benchmark.data import datasets
+from maskrcnn_benchmark.structures.bounding_box import BoxList
 
 from .box_aug import im_detect_bbox_aug
 from .coco import coco_evaluation
@@ -7,7 +10,7 @@ from .vg import vg_evaluation
 from .voc import voc_evaluation
 
 
-def evaluate(dataset, predictions, output_folder, **kwargs):
+def evaluate(dataset, predictions: List[BoxList], output_folder, **kwargs):
     """evaluate dataset using different methods based on dataset type.
     Args:
         dataset: Dataset object

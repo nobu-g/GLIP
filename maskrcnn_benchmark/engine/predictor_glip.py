@@ -1,4 +1,3 @@
-import pdb
 import re
 from typing import List, Union
 
@@ -107,7 +106,7 @@ class GLIPDemo:
                 tokenizer = CLIPTokenizerFast.from_pretrained("openai/clip-vit-base-patch32", from_slow=True)
         return tokenizer
 
-    def run_ner(self, caption):
+    def run_ner(self, caption: str):
         noun_phrases = find_noun_phrases(caption)
         noun_phrases = [remove_punctuation(phrase) for phrase in noun_phrases]
         noun_phrases = [phrase for phrase in noun_phrases if phrase != ""]
@@ -117,7 +116,7 @@ class GLIPDemo:
 
         tokens_positive = []
 
-        for entity, label in zip(relevant_phrases, labels):
+        for entity, _ in zip(relevant_phrases, labels):
             try:
                 # search all occurrences and mark them as different entities
                 for m in re.finditer(entity, caption.lower()):
@@ -156,8 +155,8 @@ class GLIPDemo:
 
     def visualize_with_predictions(
         self,
-        original_image,
-        predictions,
+        original_image: np.ndarray,
+        predictions: BoxList,
         thresh=0.5,
         alpha=0.0,
         box_pixel=3,
@@ -254,7 +253,7 @@ class GLIPDemo:
 
         return prediction
 
-    def _post_process_fixed_thresh(self, predictions):
+    def _post_process_fixed_thresh(self, predictions: BoxList):
         scores = predictions.get_field("scores")
         labels = predictions.get_field("labels").tolist()
         thresh = scores.clone()
@@ -272,7 +271,7 @@ class GLIPDemo:
         _, idx = scores.sort(0, descending=True)
         return predictions[idx]
 
-    def _post_process(self, predictions, threshold=0.5):
+    def _post_process(self, predictions: BoxList, threshold=0.5):
         scores = predictions.get_field("scores")
         labels = predictions.get_field("labels").tolist()
         thresh = scores.clone()
@@ -302,7 +301,7 @@ class GLIPDemo:
             pass
         return colors
 
-    def overlay_boxes(self, image, predictions, alpha=0.5, box_pixel=3):
+    def overlay_boxes(self, image: np.ndarray, predictions: BoxList, alpha=0.5, box_pixel=3) -> np.ndarray:
         labels = predictions.get_field("labels")
         boxes = predictions.bbox
 
@@ -318,7 +317,7 @@ class GLIPDemo:
 
         return image
 
-    def overlay_scores(self, image, predictions):
+    def overlay_scores(self, image: np.ndarray, predictions: BoxList):
         scores = predictions.get_field("scores")
         boxes = predictions.bbox
 
@@ -339,14 +338,14 @@ class GLIPDemo:
 
     def overlay_entity_names(
         self,
-        image,
-        predictions,
+        image: np.ndarray,
+        predictions: BoxList,
         names=None,
         text_size=1.0,
         text_pixel=2,
         text_offset=10,
         text_offset_original=4,
-    ):
+    ) -> np.ndarray:
         scores = predictions.get_field("scores").tolist()
         labels = predictions.get_field("labels").tolist()
         new_labels = []
@@ -389,26 +388,20 @@ class GLIPDemo:
 
         return image
 
-    def overlay_mask(self, image, predictions):
+    def overlay_mask(self, image: np.ndarray, predictions: BoxList) -> np.ndarray:
         masks = predictions.get_field("mask").numpy()
         labels = predictions.get_field("labels")
 
         colors = self.compute_colors_for_labels(labels).tolist()
-
-        # import pdb
-        # pdb.set_trace()
-        # masks = masks > 0.1
 
         for mask, color in zip(masks, colors):
             thresh = mask[0, :, :, None].astype(np.uint8)
             contours, hierarchy = cv2_util.findContours(thresh, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
             image = cv2.drawContours(image, contours, -1, color, 2)
 
-        composite = image
+        return image
 
-        return composite
-
-    def create_mask_montage(self, image, predictions):
+    def create_mask_montage(self, image, predictions: BoxList):
         masks = predictions.get_field("mask")
         masks_per_dim = self.masks_per_dim
         masks = L.interpolate(masks.float(), scale_factor=1 / masks_per_dim).byte()

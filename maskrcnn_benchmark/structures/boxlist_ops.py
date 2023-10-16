@@ -92,7 +92,7 @@ def remove_small_boxes(boxlist, min_size):
 
 # implementation from https://github.com/kuangliu/torchcv/blob/master/torchcv/utils/box.py
 # with slight modifications
-def boxlist_iou(boxlist1, boxlist2):
+def boxlist_iou(boxlist1: BoxList, boxlist2: BoxList) -> float:
     """Compute the intersection over union of two set of boxes.
     The box order must be (xmin, ymin, xmax, ymax).
 
@@ -143,7 +143,7 @@ def _cat(tensors, dim=0):
         return cat_boxlist(tensors)
 
 
-def cat_boxlist(bboxes):
+def cat_boxlist(bboxes) -> BoxList:
     """
     Concatenates a list of BoxList (having the same image size) into a
     single BoxList
@@ -172,7 +172,7 @@ def cat_boxlist(bboxes):
     return cat_boxes
 
 
-def getUnionBBox(aBB, bBB, margin=10):
+def getUnionBBox(aBB, bBB, margin=10) -> BoxList:
     assert aBB.size == bBB.size
     assert aBB.mode == bBB.mode
     ih, iw = aBB.size

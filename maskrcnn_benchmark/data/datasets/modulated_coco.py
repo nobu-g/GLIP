@@ -338,7 +338,7 @@ class ModulatedDataset(torchvision.datasets.CocoDetection):
             tokenized = self.prepare.tokenizer(caption, return_tensors="pt")
             target.add_field(
                 "positive_map_eval",
-                create_positive_map(tokenized, coco_img["tokens_positive_eval"]),
+                create_positive_map(tokenized, coco_img["tokens_positive_eval"]),  # (phrases, seq)
             )
             target.add_field("nb_eval", len(target.get_field("positive_map_eval")))
 

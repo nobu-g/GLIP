@@ -1,14 +1,14 @@
 import argparse
-import math
 from dataclasses import dataclass
 from pathlib import Path
-from typing import List, Tuple
+from typing import Dict, List, Tuple
 
 import matplotlib.pyplot as plt
 import numpy as np
 import torch
 from maskrcnn_benchmark.config import cfg
 from maskrcnn_benchmark.engine.predictor_glip import GLIPDemo
+from maskrcnn_benchmark.structures.bounding_box import BoxList
 from PIL import Image, ImageFile
 from rhoknp import KNP, Document
 from tools.util import CamelCaseDataClassJsonMixin, Rectangle, get_core_expression
@@ -18,21 +18,25 @@ from yacs.config import CfgNode
 torch.set_grad_enabled(False)
 
 
-@dataclass(frozen=True, eq=True)
+@dataclass(frozen=True)
 class BoundingBox(CamelCaseDataClassJsonMixin):
     rect: Rectangle
     class_name: str
     confidence: float
-    word_probs: List[float]
-
-    def __hash__(self):
-        return hash((self.rect, self.class_name, self.confidence, tuple(self.word_probs)))
 
 
 @dataclass(frozen=True)
-class MDETRPrediction(CamelCaseDataClassJsonMixin):
+class PhrasePrediction(CamelCaseDataClassJsonMixin):
+    phrase_index: int
+    phrase: str
     bounding_boxes: List[BoundingBox]
-    words: List[str]
+
+
+@dataclass(frozen=True)
+class GLIPPrediction(CamelCaseDataClassJsonMixin):
+    doc_id: str
+    phrase_predictions: List[BoundingBox]
+    phrases: List[str]
 
 
 # for output bounding box post-processing
@@ -73,29 +77,30 @@ def apply_mask(image, mask, color, alpha=0.5):
 
 
 def plot_results(
-    image: ImageFile, prediction: MDETRPrediction, export_dir: Path, confidence_threshold: float = 0.8
+    image: ImageFile, prediction: GLIPPrediction, export_dir: Path, confidence_threshold: float = 0.8
 ) -> None:
     plt.figure(figsize=(16, 10))
     np_image = np.array(image)
     ax = plt.gca()
     colors = COLORS * 100
 
-    for bounding_box in prediction.bounding_boxes:
-        rect = bounding_box.rect
-        score = bounding_box.confidence
-        if score < confidence_threshold:
-            continue
-        label = ",".join(word for word, prob in zip(prediction.words, bounding_box.word_probs) if prob >= 0.1)
-        color = colors.pop()
-        ax.add_patch(plt.Rectangle((rect.x1, rect.y1), rect.w, rect.h, fill=False, color=color, linewidth=3))
-        ax.text(
-            rect.x1,
-            rect.y1,
-            f"{label}: {score:0.2f}",
-            fontsize=15,
-            bbox=dict(facecolor=color, alpha=0.8),
-            fontname="Hiragino Maru Gothic Pro",
-        )
+    for phrase_prediction in prediction.phrase_predictions:
+        for bounding_box in phrase_prediction.bounding_boxes:
+            rect = bounding_box.rect
+            score = bounding_box.confidence
+            if score < confidence_threshold:
+                continue
+            label = phrase_prediction.phrase
+            color = colors.pop()
+            ax.add_patch(plt.Rectangle((rect.x1, rect.y1), rect.w, rect.h, fill=False, color=color, linewidth=3))
+            ax.text(
+                rect.x1,
+                rect.y1,
+                f"{label}: {score:0.2f}",
+                fontsize=15,
+                bbox=dict(facecolor=color, alpha=0.8),
+                fontname="Hiragino Maru Gothic Pro",
+            )
 
     plt.imshow(np_image)
     plt.axis("off")
@@ -103,7 +108,26 @@ def plot_results(
     plt.show()
 
 
-def predict_glip(cfg: CfgNode, images: list, caption: Document, batch_size: int = 32) -> List[MDETRPrediction]:
+def flickr_post_process(
+    output: BoxList, positive_map_label_to_token: Dict[int, List[int]], plus: int
+) -> tuple:
+    scores, indices = torch.topk(output.extra_fields["scores"], k=len(output.extra_fields["scores"]), sorted=True)
+    boxes: List[List[float]] = output.bbox.tolist()
+    boxes = [boxes[i] for i in indices]
+    labels: List[int] = [output.extra_fields["labels"][i].item() for i in indices]
+    output_boxes: List[List[List[float]]] = [[] for _ in range(len(positive_map_label_to_token))]
+    output_scores: List[List[float]] = [[] for _ in range(len(positive_map_label_to_token))]
+    for label, box, score in zip(labels, boxes, scores.tolist()):
+        output_boxes[label - plus].append(box)
+        output_scores[label - plus].append(score)
+
+    return (
+        output_boxes,  # (label, box, 4), label は対応する文に含まれるフレーズに振られたインデックス
+        output_scores,  # (label, box)
+    )
+
+
+def predict_glip(cfg: CfgNode, images: list, caption: Document, batch_size: int = 32) -> List[GLIPPrediction]:
     if len(images) == 0:
         return []
 
@@ -113,13 +137,7 @@ def predict_glip(cfg: CfgNode, images: list, caption: Document, batch_size: int 
         confidence_threshold=0.7,
         show_mask_heatmaps=False,
     )
-
-    # model = _make_detr(backbone_name=backbone_name, text_encoder=text_encoder)
-    # checkpoint = torch.load(str(checkpoint_path), map_location='cpu')
-    # model.load_state_dict(checkpoint['model'])
-    # if torch.cuda.is_available():
-    #     model = model.cuda()
-    # model.eval()
+    encoded: BatchEncoding = glip_demo.tokenizer(caption.text).encodings[0]
 
     assert caption.is_jumanpp_required() is False
 
@@ -133,72 +151,71 @@ def predict_glip(cfg: CfgNode, images: list, caption: Document, batch_size: int 
             custom_entity.append([[core_start, core_end]])
         char_index += len(base_phrase.text)
 
+    if cfg.MODEL.RPN_ARCHITECTURE == "VLDYHEAD":
+        plus = 1
+    else:
+        plus = 0
+
+    predictions: List[GLIPPrediction] = []
     for image in images:
         # convert to BGR format
         numpy_image = np.array(image)[:, :, [2, 1, 0]]
-        prediction = glip_demo.inference(numpy_image, caption.text, custom_entity=custom_entity)
-        import ipdb
+        output: BoxList = glip_demo.inference(numpy_image, caption.text, custom_entity=custom_entity)
+        positive_map_label_to_token: Dict[int, List[int]] = glip_demo.positive_map_label_to_token
+        boxes_list, scores_list = flickr_post_process(output, positive_map_label_to_token, plus)
 
-        ipdb.set_trace()
-        print()
-
-    predictions: List[MDETRPrediction] = []
-    image_size = images[0].size
-    assert all(im.size == image_size for im in images)
-    # mean-std normalize the input image
-    for batch_idx in range(math.ceil(len(images) / batch_size)):
-        img = torch.stack(image_tensors[batch_idx * batch_size : (batch_idx + 1) * batch_size], dim=0)  # (b, ch, H, W)
-        if torch.cuda.is_available():
-            img = img.cuda()
-
-        # propagate through the model
-        memory_cache = model(img, [caption.text] * img.size(0), encode_and_save=True)
-        # dict keys: 'pred_logits', 'pred_boxes', 'proj_queries', 'proj_tokens', 'tokenized'
-        # pred_logits: (b, cand, seq)
-        # pred_boxes: (b, cand, 4)
-        # proj_queries: (b, cand, 64)
-        # proj_tokens: (b, 28, 64)
-        # tokenized: BatchEncoding
-        outputs: dict = model(img, [caption.text] * img.size(0), encode_and_save=False, memory_cache=memory_cache)
-        pred_logits: torch.Tensor = outputs["pred_logits"].cpu()  # (b, cand, seq)
-        pred_boxes: torch.Tensor = outputs["pred_boxes"].cpu()  # (b, cand, 4)
-        tokenized: BatchEncoding = memory_cache["tokenized"]
-
-        for pred_logit, pred_box in zip(pred_logits, pred_boxes):  # (cand, seq), (cand, 4)
-            # keep only predictions with 0.0+ confidence
-            # -1: no text
-            probs: torch.Tensor = 1 - pred_logit.softmax(dim=-1)[:, -1]  # (cand)
-            keep: torch.Tensor = probs >= 0.0  # (cand)
-
-            # convert boxes from [0; 1] to image scales
-            bboxes_scaled = rescale_bboxes(pred_boxes[0, keep], image_size)  # (kept, 4)
-
-            bounding_boxes = []
-            for prob, bbox, token_probs in zip(
-                probs[keep].tolist(), bboxes_scaled.tolist(), pred_logits[0, keep].softmax(dim=-1)
-            ):
-                char_probs: List[float] = [0] * len(caption.text)
-                for pos, token_prob in enumerate(token_probs.tolist()):
-                    try:
-                        span: CharSpan = tokenized.token_to_chars(0, pos)
-                    except TypeError:
-                        continue
-                    char_probs[span.start : span.end] = [token_prob] * (span.end - span.start)
-                word_probs: List[float] = []  # 単語を構成するサブワードが持つ確率の最大値
-                char_span = CharSpan(0, 0)
-                for morpheme in caption.morphemes:
-                    char_span = CharSpan(char_span.end, char_span.end + len(morpheme.text))
-                    word_probs.append(np.max(char_probs[char_span.start : char_span.end]).item())
-
-                bounding_boxes.append(
-                    BoundingBox(
-                        rect=Rectangle.from_xyxy(*bbox),
-                        class_name="",
-                        confidence=prob,
-                        word_probs=word_probs,
+        assert len(boxes_list) == len(scores_list) == len(positive_map_label_to_token), f"{len(boxes_list)}, {len(scores_list)}, {len(positive_map_label_to_token)}"
+        for boxes, scores, (_, token_indices) in zip(boxes_list, scores_list, positive_map_label_to_token.items()):
+            # ensure token_indeices are consecutive
+            assert token_indices == list(range(token_indices[0], token_indices[-1] + 1))
+            current_token_index = 1  # skip the [CLS] token
+            current_phrase_index = 0
+            phrase_predictions = []
+            if token_indices[0] > current_token_index:
+                char_start_index = encoded.token_to_chars(current_token_index)[0]
+                char_end_index = encoded.token_to_chars(token_indices[0])[0]
+                # token_ids = encoded.ids[current_token_index:token_indices[0]]
+                phrase_predictions.append(
+                    PhrasePrediction(
+                        phrase_index=current_phrase_index,
+                        phrase=caption.text[char_start_index:char_end_index],
+                        bounding_boxes=[],
                     )
                 )
-            predictions.append(MDETRPrediction(bounding_boxes, [m.text for m in caption.morphemes]))
+                current_phrase_index += 1
+                current_token_index = token_indices[0]
+            else:
+                assert token_indices[0] == current_token_index
+
+            bounding_boxes: List[BoundingBox] = []
+            for box, score in zip(boxes, scores):
+                bounding_boxes.append(
+                    BoundingBox(
+                        rect=Rectangle(x1=box[0], y1=box[1], x2=box[2], y2=box[3]),
+                        class_name="",
+                        confidence=score,
+                    )
+                )
+
+            char_start_index = encoded.token_to_chars(token_indices[0])[0]
+            char_end_index = encoded.token_to_chars(token_indices[-1])[1]
+            phrase_predictions.append(
+                PhrasePrediction(
+                    phrase_index=current_phrase_index,
+                    phrase=caption.text[char_start_index:char_end_index],
+                    bounding_boxes=bounding_boxes,
+                )
+            )
+            current_phrase_index += 1
+            current_token_index = token_indices[-1] + 1
+
+        predictions.append(
+            GLIPPrediction(
+                doc_id=caption.doc_id,
+                phrase_predictions=phrase_predictions,
+                phrases=[pp.phrase for pp in phrase_predictions],
+            )
+        )
     return predictions
 
 
@@ -244,7 +261,7 @@ def main():
     export_dir = Path(args.export_dir)
     export_dir.mkdir(exist_ok=True)
 
-    images: List[ImageFile] = [Image.open(image_file).convert("RGB") for image_file in args.image_files]
+    images: list = [Image.open(image_file).convert("RGB") for image_file in args.image_files]
     if args.caption_file is not None:
         caption = Document.from_knp(Path(args.caption_file).read_text())
     else:

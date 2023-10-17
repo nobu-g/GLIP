@@ -5,7 +5,7 @@ import torch
 from torch import nn
 
 # from pytorch_pretrained_bert.modeling import BertModel
-from transformers import BertConfig, BertModel, RobertaConfig, RobertaModel, AutoConfig, AutoModel
+from transformers import AutoConfig, AutoModel, BertConfig, BertModel, RobertaConfig, RobertaModel
 
 
 class BertEncoder(nn.Module):

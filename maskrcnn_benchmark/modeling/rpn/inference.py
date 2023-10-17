@@ -802,7 +802,9 @@ def convert_grounding_to_od_logits_v2(logits, num_class, positive_map, score_agg
         elif score_agg == "MAX":
             # torch.max() returns (values, indices)
             for label_j in positive_map:
-                scores[:, :, label_j if disable_minus_one else label_j - 1] = logits[:, :, positive_map[label_j]].max(-1)[0]
+                scores[:, :, label_j if disable_minus_one else label_j - 1] = logits[:, :, positive_map[label_j]].max(
+                    -1
+                )[0]
         elif score_agg == "ONEHOT":
             # one hot
             scores = logits[:, :, : len(positive_map)]

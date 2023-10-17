@@ -108,9 +108,7 @@ def plot_results(
     plt.show()
 
 
-def flickr_post_process(
-    output: BoxList, positive_map_label_to_token: Dict[int, List[int]], plus: int
-) -> tuple:
+def flickr_post_process(output: BoxList, positive_map_label_to_token: Dict[int, List[int]], plus: int) -> tuple:
     scores, indices = torch.topk(output.extra_fields["scores"], k=len(output.extra_fields["scores"]), sorted=True)
     boxes: List[List[float]] = output.bbox.tolist()
     boxes = [boxes[i] for i in indices]
@@ -164,7 +162,9 @@ def predict_glip(cfg: CfgNode, images: list, caption: Document) -> List[GLIPPred
         positive_map_label_to_token: Dict[int, List[int]] = glip_demo.positive_map_label_to_token
         boxes_list, scores_list = flickr_post_process(output, positive_map_label_to_token, plus)
 
-        assert len(boxes_list) == len(scores_list) == len(positive_map_label_to_token), f"{len(boxes_list)}, {len(scores_list)}, {len(positive_map_label_to_token)}"
+        assert (
+            len(boxes_list) == len(scores_list) == len(positive_map_label_to_token)
+        ), f"{len(boxes_list)}, {len(scores_list)}, {len(positive_map_label_to_token)}"
         for boxes, scores, (_, token_indices) in zip(boxes_list, scores_list, positive_map_label_to_token.items()):
             # ensure token_indeices are consecutive
             assert token_indices == list(range(token_indices[0], token_indices[-1] + 1))

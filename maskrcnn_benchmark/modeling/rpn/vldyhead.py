@@ -29,6 +29,7 @@ from maskrcnn_benchmark.utils.fuse_helper import (
 )
 from timm.models.layers import DropPath, trunc_normal_
 from torch import nn
+from transformers import AutoConfig
 from transformers.modeling_utils import apply_chunking_to_forward
 from transformers.models.bert.modeling_bert import (
     BertAttention,
@@ -37,7 +38,6 @@ from transformers.models.bert.modeling_bert import (
     BertOutput,
     BertPreTrainedModel,
 )
-from transformers import AutoConfig
 
 from ..utils import cat, concat_box_prediction_layers, permute_and_flatten
 from .anchor_generator import make_anchor_generator_complex

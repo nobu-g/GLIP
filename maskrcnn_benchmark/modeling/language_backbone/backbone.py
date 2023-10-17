@@ -20,6 +20,7 @@ def build_bert_backbone(cfg):
     model = nn.Sequential(OrderedDict([("body", body)]))
     return model
 
+
 @registry.LANGUAGE_BACKBONES.register("xlm-roberta-base")
 def build_bert_backbone(cfg):
     body = bert_model.BertEncoder(cfg)

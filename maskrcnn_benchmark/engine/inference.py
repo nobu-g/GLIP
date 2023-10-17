@@ -2,24 +2,24 @@
 import datetime
 import logging
 import os
-from pathlib import Path
 import re
 import time
 from collections import defaultdict
 from io import BytesIO
+from pathlib import Path
 from typing import Dict, List
 
 # import matplotlib.pylab as pylab
 import matplotlib.pyplot as plt
-import torch
-import requests
 import numpy as np
+import requests
+import torch
 from maskrcnn_benchmark.data.datasets.evaluation import evaluate, im_detect_bbox_aug
 from maskrcnn_benchmark.data.datasets.evaluation.flickr.flickr_eval import FlickrEvaluator
 from maskrcnn_benchmark.data.datasets.tsv import load_from_yaml_file
 from maskrcnn_benchmark.structures.bounding_box import BoxList
-from tqdm import tqdm
 from PIL import Image
+from tqdm import tqdm
 
 from ..utils.comm import all_gather, is_main_process, synchronize
 

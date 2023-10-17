@@ -127,7 +127,7 @@ def flickr_post_process(
     )
 
 
-def predict_glip(cfg: CfgNode, images: list, caption: Document, batch_size: int = 32) -> List[GLIPPrediction]:
+def predict_glip(cfg: CfgNode, images: list, caption: Document) -> List[GLIPPrediction]:
     if len(images) == 0:
         return []
 
@@ -243,7 +243,7 @@ def main():
     #     '--backbone-name', type=str, default='timm_tf_efficientnet_b3_ns', help='backbone image encoder name'
     # )
     parser.add_argument("--text-encoder", type=str, default=None, help="text encoder name")
-    parser.add_argument("--batch-size", "--bs", type=int, default=32, help="Batch size.")
+    # parser.add_argument("--batch-size", "--bs", type=int, default=32, help="Batch size.")
     parser.add_argument("--export-dir", type=str, help="Path to directory to export results.")
     parser.add_argument("--plot", action="store_true", help="Plot results.")
     args = parser.parse_args()
@@ -267,7 +267,7 @@ def main():
     else:
         caption = KNP().apply_to_document(args.text)
 
-    predictions = predict_glip(cfg, images, caption, args.batch_size)
+    predictions = predict_glip(cfg, images, caption)
     if args.plot:
         plot_results(images[0], predictions[0], export_dir)
 

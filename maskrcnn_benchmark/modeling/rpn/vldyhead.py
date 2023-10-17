@@ -37,6 +37,7 @@ from transformers.models.bert.modeling_bert import (
     BertOutput,
     BertPreTrainedModel,
 )
+from transformers import AutoConfig
 
 from ..utils import cat, concat_box_prediction_layers, permute_and_flatten
 from .anchor_generator import make_anchor_generator_complex
@@ -481,7 +482,7 @@ class VLFuse(torch.nn.Module):
         self.t2i_hidden_dim = 1024  # 256 * 4
         self.i2t_hidden_dim = 3072  # 768 * 4
 
-        if self.lang_model in ["bert-base-uncased", "roberta-base", "clip"]:
+        if self.lang_model in ["bert-base-uncased", "roberta-base", "xlm-roberta-base", "clip"]:
             self.lang_dim = cfg.MODEL.LANGUAGE_BACKBONE.LANG_DIM
         else:
             self.lang_dim = 1024
@@ -619,14 +620,10 @@ class VLDyHead(torch.nn.Module):
     def __init__(self, cfg):
         super().__init__()
         self.cfg = cfg
-        # bert_cfg = BertConfig.from_pretrained(cfg.MODEL.LANGUAGE_BACKBONE.MODEL_TYPE)
-        if cfg.MODEL.LANGUAGE_BACKBONE.MODEL_TYPE == "bert-base-uncased":
-            lang_cfg = BertConfig.from_pretrained(cfg.MODEL.LANGUAGE_BACKBONE.MODEL_TYPE)
-        elif cfg.MODEL.LANGUAGE_BACKBONE.MODEL_TYPE == "clip":
+        if cfg.MODEL.LANGUAGE_BACKBONE.MODEL_TYPE == "clip":
             lang_cfg = cfg
         else:
-            lang_cfg = None
-            raise NotImplementedError
+            lang_cfg = AutoConfig.from_pretrained(cfg.MODEL.LANGUAGE_BACKBONE.MODEL_TYPE)
 
         num_classes = cfg.MODEL.DYHEAD.NUM_CLASSES - 1
         num_tokens = cfg.MODEL.LANGUAGE_BACKBONE.MAX_QUERY_LEN
@@ -665,7 +662,7 @@ class VLDyHead(torch.nn.Module):
                     #     clamp_min_for_underflow=cfg.MODEL.DYHEAD.FUSE_CONFIG.CLAMP_BERTATTN_MIN_FOR_UNDERFLOW,
                     #     clamp_max_for_overflow=cfg.MODEL.DYHEAD.FUSE_CONFIG.CLAMP_BERTATTN_MAX_FOR_OVERFLOW)
                     # )
-                    if cfg.MODEL.LANGUAGE_BACKBONE.MODEL_TYPE == "bert-base-uncased":
+                    if cfg.MODEL.LANGUAGE_BACKBONE.MODEL_TYPE in ("bert-base-uncased", "xlm-roberta-base"):
                         dyhead_tower.append(
                             BertEncoderLayer(
                                 lang_cfg,
@@ -946,7 +943,7 @@ class VLDyHeadModule(torch.nn.Module):
         self.lang_model = cfg.MODEL.LANGUAGE_BACKBONE.MODEL_TYPE
         self.joint_embedding_size = cfg.MODEL.DYHEAD.FUSE_CONFIG.JOINT_EMB_SIZE
         self.joint_embedding_dropout = cfg.MODEL.DYHEAD.FUSE_CONFIG.JOINT_EMB_DROPOUT
-        if self.lang_model in ["bert-base-uncased", "roberta-base", "clip"]:
+        if self.lang_model in ("bert-base-uncased", "roberta-base", "xlm-roberta-base", "clip"):
             self.lang_dim = cfg.MODEL.LANGUAGE_BACKBONE.LANG_DIM
         else:
             self.lang_dim = 1024

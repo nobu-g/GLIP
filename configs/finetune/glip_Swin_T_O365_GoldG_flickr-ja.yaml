@@ -11,8 +11,8 @@ MODEL:
     FREEZE: True
 
   LANGUAGE_BACKBONE:
-    FREEZE: False
-    MODEL_TYPE: "bert-base-uncased" # "roberta-base", "clip"
+    FREEZE: True  # EDIT
+    MODEL_TYPE: "xlm-roberta-base" # "roberta-base", "clip", "xlm-roberta-base"
     MASK_SPECIAL: False
 
   RPN:

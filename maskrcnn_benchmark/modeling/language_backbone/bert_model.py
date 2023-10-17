@@ -5,7 +5,7 @@ import torch
 from torch import nn
 
 # from pytorch_pretrained_bert.modeling import BertModel
-from transformers import BertConfig, BertModel, RobertaConfig, RobertaModel
+from transformers import BertConfig, BertModel, RobertaConfig, RobertaModel, AutoConfig, AutoModel
 
 
 class BertEncoder(nn.Module):
@@ -27,6 +27,11 @@ class BertEncoder(nn.Module):
             config = RobertaConfig.from_pretrained(self.bert_name)
             config.gradient_checkpointing = self.cfg.MODEL.LANGUAGE_BACKBONE.USE_CHECKPOINT
             self.model = RobertaModel.from_pretrained(self.bert_name, add_pooling_layer=False, config=config)
+            self.language_dim = 768
+        elif self.bert_name == "xlm-roberta-base":
+            config = AutoConfig.from_pretrained(self.bert_name)
+            config.gradient_checkpointing = self.cfg.MODEL.LANGUAGE_BACKBONE.USE_CHECKPOINT
+            self.model = AutoModel.from_pretrained(self.bert_name, add_pooling_layer=False, config=config)
             self.language_dim = 768
         else:
             raise NotImplementedError

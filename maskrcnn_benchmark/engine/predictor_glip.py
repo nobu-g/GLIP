@@ -3,7 +3,6 @@ from typing import List, Union
 
 import cv2
 import inflect
-import nltk
 import numpy as np
 import torch
 from maskrcnn_benchmark import layers as L
@@ -18,8 +17,6 @@ from torchvision import transforms as T
 from transformers import AutoTokenizer
 
 engine = inflect.engine()
-nltk.download("punkt")
-nltk.download("averaged_perceptron_tagger")
 
 import timeit
 
@@ -474,6 +471,10 @@ def create_positive_map(tokenized, tokens_positive: List[List[List[int]]]) -> to
 
 def find_noun_phrases(caption: str) -> List[str]:
     """Return a list of noun phrases in the caption"""
+    import nltk
+
+    nltk.download("punkt")
+    nltk.download("averaged_perceptron_tagger")
     caption = caption.lower()
     tokens = nltk.word_tokenize(caption)
     pos_tags = nltk.pos_tag(tokens)

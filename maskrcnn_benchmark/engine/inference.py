@@ -2,31 +2,36 @@
 import datetime
 import logging
 import os
-import pdb
+from pathlib import Path
 import re
 import time
 from collections import defaultdict
+from io import BytesIO
+from typing import Dict, List
 
-import matplotlib.pylab as pylab
+# import matplotlib.pylab as pylab
 import matplotlib.pyplot as plt
 import torch
+import requests
+import numpy as np
 from maskrcnn_benchmark.data.datasets.evaluation import evaluate, im_detect_bbox_aug
 from maskrcnn_benchmark.data.datasets.evaluation.flickr.flickr_eval import FlickrEvaluator
 from maskrcnn_benchmark.data.datasets.tsv import load_from_yaml_file
 from maskrcnn_benchmark.structures.bounding_box import BoxList
 from tqdm import tqdm
+from PIL import Image
 
 from ..utils.comm import all_gather, is_main_process, synchronize
 
 
-def imshow(img, file_name="tmp.jpg"):
+def imshow(img: np.ndarray, file_name="tmp.jpg") -> None:
     plt.imshow(img[:, :, [2, 1, 0]])
     plt.axis("off")
     # plt.figtext(0.5, 0.09, "test", wrap=True, horizontalalignment='center', fontsize=20)
     plt.savefig(file_name)
 
 
-def load(url_or_file_name):
+def load(url_or_file_name) -> np.ndarray:
     try:
         response = requests.get(url_or_file_name)
     except:
@@ -218,7 +223,7 @@ def create_queries_and_maps_from_dataset(dataset, cfg):
 
 def create_queries_and_maps(labels, label_list, additional_labels=None, cfg=None):
     # Clean label list
-    original_label_list = label_list.copy()
+    # original_label_list = label_list.copy()
     label_list = [clean_name(i) for i in label_list]
     # Form the query and get the mapping
     tokens_positive = []
@@ -294,10 +299,13 @@ def create_queries_and_maps(labels, label_list, additional_labels=None, cfg=None
     return objects_query, positive_map_label_to_token
 
 
-def create_positive_map_label_to_token_from_positive_map(positive_map, plus=0):
-    positive_map_label_to_token = {}
-    for i in range(len(positive_map)):
-        positive_map_label_to_token[i + plus] = torch.nonzero(positive_map[i], as_tuple=True)[0].tolist()
+def create_positive_map_label_to_token_from_positive_map(
+    positive_map: torch.Tensor,  # (phrases, seq)
+    plus: int = 0,
+):
+    positive_map_label_to_token: Dict[int, List[int]] = {}  # key: 文内のフレーズのインデックス, value: そのフレーズに対応するトークンのインデックス
+    for idx, positive_distribution in enumerate(positive_map):
+        positive_map_label_to_token[idx + plus] = torch.nonzero(positive_distribution, as_tuple=True)[0].tolist()
     return positive_map_label_to_token
 
 
@@ -323,7 +331,7 @@ def _accumulate_predictions_from_multiple_gpus(predictions_per_gpu):
     return predictions
 
 
-def resize_box(output, targets):
+def resize_box(output: BoxList, targets) -> BoxList:
     if isinstance(targets[0], dict):
         orig_target_sizes = targets[0]["orig_size"].unsqueeze(0)
     else:
@@ -332,33 +340,44 @@ def resize_box(output, targets):
     return output.resize((img_w, img_h))
 
 
-def flickr_post_process(output, targets, positive_map_label_to_token, plus):
-    output = resize_box(output, targets)
+def flickr_post_process(
+    output: BoxList, targets: List[BoxList], positive_map_label_to_token: Dict[int, List[int]], plus: int
+) -> dict:
+    output: BoxList = resize_box(output, targets)
     scores, indices = torch.topk(output.extra_fields["scores"], k=len(output.extra_fields["scores"]), sorted=True)
-    boxes = output.bbox.tolist()
+    boxes: List[List[float]] = output.bbox.tolist()
     boxes = [boxes[i] for i in indices]
-    labels = [output.extra_fields["labels"][i] for i in indices]
-    output_boxes = [[] for i in range(len(positive_map_label_to_token))]
-    output_scores = [[] for i in range(len(positive_map_label_to_token))]
-    for i in range(len(boxes)):
-        output_boxes[labels[i] - plus].append(boxes[i])
-        output_scores[labels[i] - plus].append(scores[i])
-    for i in output_boxes:
-        i.append([0.0, 0.0, 0.0, 0.0])
-    image_ids = [t.extra_fields["original_img_id"] for t in targets]
-    sentence_ids = [t.extra_fields["sentence_id"] for t in targets]
+    labels: List[int] = [output.extra_fields["labels"][i].item() for i in indices]
+    output_boxes: List[List[List[float]]] = [[] for _ in range(len(positive_map_label_to_token))]
+    output_scores: List[List[float]] = [[] for _ in range(len(positive_map_label_to_token))]
+    for label, box, score in zip(labels, boxes, scores.tolist()):
+        output_boxes[label - plus].append(box)
+        output_scores[label - plus].append(score)
+    for box in output_boxes:
+        box.append([0.0, 0.0, 0.0, 0.0])
+    image_ids: List[int] = [t.extra_fields["original_img_id"] for t in targets]
+    sentence_ids: List[int] = [t.extra_fields["sentence_id"] for t in targets]
 
     return {
         "image_id": image_ids[0],
         "sentence_id": sentence_ids[0],
-        "boxes": output_boxes,
-        "scores": output_scores,
+        "boxes": output_boxes,  # (label, box, 4), label は対応する文に含まれるフレーズに振られたインデックス
+        "scores": output_scores,  # (label, box)
     }
 
 
-def build_flickr_evaluator(cfg):
+def build_flickr_evaluator(cfg) -> FlickrEvaluator:
+    flickr_ann_path: str
+    if "flickr30k_ja" in cfg.DATASETS.TEST[0]:
+        flickr_ann_path = "DATASET/flickr30k_ja/flickr30k_entities"
+    elif "flickr30k_jcre3" in cfg.DATASETS.TEST[0]:
+        flickr_ann_path = "DATASET/jcre3/annotations"
+    elif "flickr30k" in cfg.DATASETS.TEST[0]:
+        flickr_ann_path = "DATASET/flickr30k/flickr30k"
+    else:
+        raise NotImplementedError
     evaluator = FlickrEvaluator(
-        "DATASET/flickr30k/flickr30k/",  # Hard written!!
+        flickr_ann_path,
         subset="test" if "test" in cfg.DATASETS.TEST[0] else "val",
         merge_boxes=cfg.DATASETS.FLICKR_GT_TYPE == "merged",
     )
@@ -389,7 +408,7 @@ def write_lvis_results(results, output_file_name):
     return
 
 
-def write_flickr_results(results, output_file_name):
+def write_flickr_results(results: dict, output_file_name: str) -> None:
     """
     {'Recall@1_all': 0.8394651146677753, 'Recall@1_animals': 0.9177820267686424, 'Recall@1_bodyparts': 0.7097966728280961, ...}
     """
@@ -399,10 +418,7 @@ def write_flickr_results(results, output_file_name):
         each_result = each_metric + ", " + str(number) + " "
         lines.append(each_result)
 
-    string_to_write = "\n".join(lines) + "\n"
-    with open(output_file_name, "w") as f:
-        f.write(string_to_write)
-    return
+    Path(output_file_name).write_text("\n".join(lines) + "\n")
 
 
 def inference(
@@ -417,13 +433,8 @@ def inference(
     output_folder=None,
     cfg=None,
     verbose=True,
-    visualizer=None,
 ):
-    # convert to a torch.device for efficiency
-    try:
-        device = torch.device(device)
-    except:
-        device = device
+    device = torch.device(device)
     num_devices = torch.distributed.get_world_size() if torch.distributed.is_initialized() else 1
     logger = logging.getLogger("maskrcnn_benchmark.inference")
     dataset = data_loader.dataset
@@ -474,7 +485,7 @@ def inference(
     elif "lvis" in cfg.DATASETS.TEST[0]:
         evaluator = build_lvis_evaluator(dataset.ann_file, fixed_ap=not cfg.DATASETS.LVIS_USE_NORMAL_AP)
     else:
-        evaluator = None
+        raise NotImplementedError
 
     model.eval()
     results_dict = {}
@@ -488,7 +499,7 @@ def inference(
             break
         images, targets, image_ids, *_ = batch
 
-        all_output = []
+        all_output: List[List[BoxList]] = []
         mdetr_style_output = []
         with torch.no_grad():
             if cfg.TEST.USE_MULTISCALE:
@@ -501,7 +512,7 @@ def inference(
                         captions = None
                         positive_map_label_to_token = None
 
-                output = im_detect_bbox_aug(model, images, device, captions, positive_map_label_to_token)
+                output: List[BoxList] = im_detect_bbox_aug(model, images, device, captions, positive_map_label_to_token)
                 output = [o.to(cpu_device) for o in output]
                 all_output.append(output)
             else:
@@ -525,30 +536,35 @@ def inference(
                             plus = 1
                         else:
                             plus = 0
-                        assert len(positive_map_eval) == 1  # Let's just use one image per batch
-                        positive_map_eval = positive_map_eval[0]
+                        assert len(positive_map_eval) == len(captions) == 1  # Let's just use one image per batch
+                        positive_map_eval: torch.Tensor = positive_map_eval[0]  # (phrases, seq)
                         positive_map_label_to_token = create_positive_map_label_to_token_from_positive_map(
                             positive_map_eval, plus=plus
                         )
-                    output = model(
+                    raw_output: List[BoxList] = model(
                         images,
                         captions=captions,
                         positive_map=positive_map_label_to_token,
                     )
-                    output = [o.to(cpu_device) for o in output]
+                    raw_output = [o.to(cpu_device) for o in raw_output]
+                    all_output.append(raw_output)
 
                     if "flickr" in cfg.DATASETS.TEST[0]:
-                        output = output[0]
-                        new_output = flickr_post_process(
-                            output,
+                        new_output: dict = flickr_post_process(
+                            raw_output[0],
                             targets,
                             positive_map_label_to_token,
                             plus,  # This is only used in Flickr
                         )
-                        mdetr_style_output.append(new_output)
+                        mdetr_style_output.append(
+                            {
+                                **new_output,
+                                "caption": captions[0],
+                                "positive_map": positive_map_label_to_token,
+                            }
+                        )
                     elif "lvis" in cfg.DATASETS.TEST[0]:
-                        output = output[0]
-                        output = resize_box(output, targets)
+                        output: BoxList = resize_box(raw_output[0], targets)
                         scores = output.extra_fields["scores"]
                         labels = output.extra_fields["labels"]
                         boxes = output.bbox
@@ -560,55 +576,6 @@ def inference(
                         )
                     else:
                         all_output.append(output)
-        if visualizer is not None:
-            assert len(all_output) == 1
-            if "lvis" in cfg.DATASETS.TEST[0]:
-                scores = [o[1]["scores"] for o in mdetr_style_output]
-                labels = [o[1]["labels"] for o in mdetr_style_output]
-                boxes = [o[1]["boxes"] for o in mdetr_style_output]
-                scores = torch.cat(scores, dim=0)
-                labels = torch.cat(labels, dim=0)
-                boxes = torch.cat(boxes, dim=0)
-                visualizer_input = BoxList(boxes, output.size)
-                visualizer_input.add_field("scores", scores)
-                visualizer_input.add_field("labels", labels)
-            else:
-                visualizer_input = all_output[0][0]  # single image_visualize
-
-            image_id = dataset.ids[i]
-            try:
-                image_path = os.path.join(dataset.root, dataset.coco.loadImgs(image_id)[0]["file_name"])
-                categories = dataset.coco.dataset["categories"]
-            except:
-                lvis = dataset.lvis
-                img_id = dataset.ids[i]
-                ann_ids = lvis.get_ann_ids(img_ids=img_id)
-                target = lvis.load_anns(ann_ids)
-
-                image_path = "DATASET/coco/" + "/".join(dataset.lvis.load_imgs(img_id)[0]["coco_url"].split("/")[-2:])
-                categories = dataset.lvis.dataset["categories"]
-
-            image = load(image_path)
-            no_background = True
-            label_list = []
-            for index, i in enumerate(categories):
-                if not no_background or (i["name"] != "__background__" and i["id"] != 0):
-                    label_list.append(i["name"])
-            visualizer.entities = label_list
-
-            result, _ = visualizer.visualize_with_predictions(
-                image,
-                visualizer_input,
-                threshold,
-                alpha=alpha,
-                box_pixel=box_pixel,
-                text_size=text_size,
-                text_pixel=text_pixel,
-                text_offset=text_offset,
-                text_offset_original=text_offset_original,
-                color=color,
-            )
-            imshow(result, f"./visualize/img_{i}.jpg")
 
         if evaluator is not None:
             evaluator.update(mdetr_style_output)
@@ -627,7 +594,7 @@ def inference(
             print("Evaluator has no accumulation, skipped...")
         score = evaluator.summarize()
         print(score)
-        import maskrcnn_benchmark.utils.mdetr_dist as dist
+        # import maskrcnn_benchmark.utils.mdetr_dist as dist
 
         if is_main_process():
             if "flickr" in cfg.DATASETS.TEST[0]:

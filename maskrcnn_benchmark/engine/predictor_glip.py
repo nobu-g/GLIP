@@ -35,10 +35,10 @@ class GLIPDemo:
         load_model=True,
     ):
         self.cfg = cfg.clone()
+        self.device = torch.device(cfg.MODEL.DEVICE)
         if load_model:
             self.model = build_detection_model(cfg)
             self.model.eval()
-            self.device = torch.device(cfg.MODEL.DEVICE)
             self.model.to(self.device)
         self.min_image_size = min_image_size
         self.show_mask_heatmaps = show_mask_heatmaps
@@ -91,8 +91,8 @@ class GLIPDemo:
     def build_tokenizer(self):
         cfg = self.cfg
         tokenizer = None
-        if cfg.MODEL.LANGUAGE_BACKBONE.TOKENIZER_TYPE == "bert-base-uncased":
-            tokenizer = AutoTokenizer.from_pretrained("bert-base-uncased")
+        if cfg.MODEL.LANGUAGE_BACKBONE.TOKENIZER_TYPE in ("bert-base-uncased", "roberta-base", "xlm-roberta-base"):
+            tokenizer = AutoTokenizer.from_pretrained(cfg.MODEL.LANGUAGE_BACKBONE.TOKENIZER_TYPE)
         elif cfg.MODEL.LANGUAGE_BACKBONE.TOKENIZER_TYPE == "clip":
             from transformers import CLIPTokenizerFast
 
@@ -106,15 +106,15 @@ class GLIPDemo:
                 tokenizer = CLIPTokenizerFast.from_pretrained("openai/clip-vit-base-patch32", from_slow=True)
         return tokenizer
 
-    def run_ner(self, caption: str):
-        noun_phrases = find_noun_phrases(caption)
+    def run_ner(self, caption: str) -> List[List[List[int]]]:
+        noun_phrases: List[str] = find_noun_phrases(caption)
         noun_phrases = [remove_punctuation(phrase) for phrase in noun_phrases]
         noun_phrases = [phrase for phrase in noun_phrases if phrase != ""]
         relevant_phrases = noun_phrases
         labels = noun_phrases
         self.entities = labels
 
-        tokens_positive = []
+        tokens_positive: List[List[List[int]]] = []
 
         for entity, _ in zip(relevant_phrases, labels):
             try:
@@ -128,15 +128,15 @@ class GLIPDemo:
 
         return tokens_positive
 
-    def inference(self, original_image, original_caption):
-        predictions = self.compute_prediction(original_image, original_caption)
+    def inference(self, original_image: np.ndarray, original_caption: str, custom_entity=None):
+        predictions = self.compute_prediction(original_image, original_caption, custom_entity)
         top_predictions = self._post_process_fixed_thresh(predictions)
         return top_predictions
 
     def run_on_web_image(
         self,
-        original_image,
-        original_caption,
+        original_image: np.ndarray,
+        original_caption: str,
         thresh=0.5,
         custom_entity=None,
         alpha=0.0,
@@ -187,7 +187,9 @@ class GLIPDemo:
             result = self.overlay_mask(result, top_predictions)
         return result, top_predictions
 
-    def compute_prediction(self, original_image, original_caption, custom_entity=None):
+    def compute_prediction(
+        self, original_image: np.ndarray, original_caption: Union[str, List[str]], custom_entity=None
+    ):
         # image
         image = self.transforms(original_image)
         image_list = to_image_list(image, self.cfg.DATALOADER.SIZE_DIVISIBILITY)
@@ -207,12 +209,13 @@ class GLIPDemo:
             tokens_positive = [tokens_positive]
 
             original_caption = caption_string
-            print(tokens_positive)
         else:
             tokenized = self.tokenizer([original_caption], return_tensors="pt")
             if custom_entity is None:
                 tokens_positive = self.run_ner(original_caption)
-            print(tokens_positive)
+            else:
+                tokens_positive = custom_entity
+        print(tokens_positive)
         # process positive map
         positive_map = create_positive_map(tokenized, tokens_positive)
 
@@ -433,11 +436,11 @@ def create_positive_map_label_to_token_from_positive_map(positive_map, plus=0):
     return positive_map_label_to_token
 
 
-def create_positive_map(tokenized, tokens_positive):
-    """construct a map such that positive_map[i,j] = True iff box i is associated to token j"""
+def create_positive_map(tokenized, tokens_positive: List[List[List[int]]]) -> torch.Tensor:
+    """construct a map such that positive_map[i,j] = True if box i is associated to token j"""
     positive_map = torch.zeros((len(tokens_positive), 256), dtype=torch.float)
 
-    for j, tok_list in enumerate(tokens_positive):
+    for i, tok_list in enumerate(tokens_positive):
         for beg, end in tok_list:
             try:
                 beg_pos = tokenized.char_to_token(beg)
@@ -465,11 +468,12 @@ def create_positive_map(tokenized, tokens_positive):
                 continue
 
             assert beg_pos is not None and end_pos is not None
-            positive_map[j, beg_pos : end_pos + 1].fill_(1)
+            positive_map[i, beg_pos : end_pos + 1].fill_(1)
     return positive_map / (positive_map.sum(-1)[:, None] + 1e-6)
 
 
 def find_noun_phrases(caption: str) -> List[str]:
+    """Return a list of noun phrases in the caption"""
     caption = caption.lower()
     tokens = nltk.word_tokenize(caption)
     pos_tags = nltk.pos_tag(tokens)
@@ -478,7 +482,7 @@ def find_noun_phrases(caption: str) -> List[str]:
     cp = nltk.RegexpParser(grammar)
     result = cp.parse(pos_tags)
 
-    noun_phrases = list()
+    noun_phrases = []
     for subtree in result.subtrees():
         if subtree.label() == "NP":
             noun_phrases.append(" ".join(t[0] for t in subtree.leaves()))

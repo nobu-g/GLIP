@@ -13,6 +13,7 @@ MODEL:
   LANGUAGE_BACKBONE:
     FREEZE: True  # EDIT
     MODEL_TYPE: "xlm-roberta-base" # "roberta-base", "clip", "xlm-roberta-base"
+    TOKENIZER_TYPE: "xlm-roberta-base"
     MASK_SPECIAL: False
 
   RPN:
@@ -57,7 +58,8 @@ TEST:
 
 # use for grounding model
 DATASETS:
-  TRAIN: ("flickr30k_ja_train", )
+  # TRAIN: ("flickr30k_ja_train", )
+  TRAIN: ("mixed_train_no_coco", "flickr30k_ja_train", )
   TEST: ("coco_2017_val", )  # Flickr30kDataset is not supported for evaluation
   DISABLE_SHUFFLE: False
   ADD_DET_PROMPT: False

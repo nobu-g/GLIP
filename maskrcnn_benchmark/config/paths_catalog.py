@@ -3,28 +3,29 @@
 
 import os
 
+DATASET_SEARCH_PATHS = ["./DATASET", "./OUTPUT", "./data", "./MODEL"]
 
-def try_to_find(file, return_dir=False, search_path=["./DATASET", "./OUTPUT", "./data", "./MODEL"]):
+
+def try_to_find(file: str, return_dir: bool = False) -> str:
     if not file:
         return file
 
     if file.startswith("catalog://"):
         return file
 
-    DATASET_PATH = ["./"]
+    dataset_paths = ["./"]
     if "DATASET" in os.environ:
-        DATASET_PATH.append(os.environ["DATASET"])
-    DATASET_PATH += search_path
+        dataset_paths.append(os.environ["DATASET"])
+    dataset_paths += DATASET_SEARCH_PATHS
 
-    for path in DATASET_PATH:
+    for path in dataset_paths:
         if os.path.exists(os.path.join(path, file)):
             if return_dir:
                 return path
             else:
                 return os.path.join(path, file)
 
-    print(f"Cannot find {file} in {DATASET_PATH}")
-    exit(1)
+    raise FileNotFoundError(f"Cannot find {file!r} in {dataset_paths}")
 
 
 class DatasetCatalog:
@@ -41,7 +42,7 @@ class DatasetCatalog:
             "vg_img_dir": "gqa/images",
             "ann_file": "mdetr_annotations/final_mixed_train_no_coco.json",
         },
-        # flickr30k
+        # Flickr30k Entities
         "flickr30k_train": {
             "img_folder": "flickr30k/flickr30k_images/train",
             "ann_file": "mdetr_annotations/final_flickr_separateGT_train.json",

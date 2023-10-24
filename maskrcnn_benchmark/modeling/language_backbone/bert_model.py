@@ -3,7 +3,6 @@ from copy import deepcopy
 import numpy as np
 import torch
 from torch import nn
-
 from transformers import AutoConfig, AutoModel
 
 
@@ -19,7 +18,7 @@ class BertEncoder(nn.Module):
 
         config = AutoConfig.from_pretrained(self.model_type)
         config.gradient_checkpointing = self.cfg.MODEL.LANGUAGE_BACKBONE.USE_CHECKPOINT
-        self.model = AutoModel.from_pretrained(self.bert_name, add_pooling_layer=False, config=config)
+        self.model = AutoModel.from_pretrained(self.model_type, add_pooling_layer=False, config=config)
         self.num_layers = cfg.MODEL.LANGUAGE_BACKBONE.N_LAYERS
 
     def forward(self, x):

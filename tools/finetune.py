@@ -151,10 +151,7 @@ def train(
 
     if is_main_process():
         for name, p in model.named_parameters():
-            if p.requires_grad:
-                print(name, " : Not Frozen")
-            else:
-                print(name, " : Frozen")
+            print(f"{name}:", "Not Frozen" if p.requires_grad else "Frozen")
     report_freeze_options(cfg)
     if cfg.DATASETS.ALTERNATIVE_TRAINING:
         alternative_train(
@@ -411,7 +408,7 @@ def main():
         shuffle_seeds = [None]
 
     model = None
-    for task_id, ft_cfg in enumerate(ft_configs, 1):
+    for task_id, ft_cfg in enumerate(ft_configs, start=1):
         for shuffle_seed in shuffle_seeds:
             cfg_ = cfg.clone()
             cfg_.defrost()

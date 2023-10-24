@@ -707,7 +707,7 @@ class ATSSPostProcessor(torch.nn.Module):
         dot_product_logits=None,
         positive_map=None,
     ):
-        if positive_map is not None:
+        if positive_map is not None and isinstance(positive_map, torch.Tensor):
             positive_map = positive_map.long()
         sampled_boxes = []
         anchors = list(zip(*anchors))

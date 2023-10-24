@@ -121,7 +121,7 @@ class GeneralizedVLRCNN(nn.Module):
                     p.requires_grad = False
 
         self.freeze_language_backbone = self.cfg.MODEL.LANGUAGE_BACKBONE.FREEZE
-        if self.cfg.MODEL.LANGUAGE_BACKBONE.FREEZE:
+        if self.freeze_language_backbone:
             for p in self.language_backbone.parameters():
                 p.requires_grad = False
 

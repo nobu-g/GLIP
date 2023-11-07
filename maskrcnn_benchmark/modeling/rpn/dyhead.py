@@ -214,8 +214,10 @@ class DyConv(torch.nn.Module):
                 temp_fea.append(self.DyConv[2](x[level - 1], **conv_args))
             if level < len(x) - 1:
                 temp_fea.append(
-                    F.upsample_bilinear(
+                    F.interpolate(
                         self.DyConv[0](x[level + 1], **conv_args),
+                        mode="bilinear",
+                        align_corners=True,
                         size=[feature.size(2), feature.size(3)],
                     )
                 )

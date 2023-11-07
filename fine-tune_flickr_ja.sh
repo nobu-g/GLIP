@@ -3,9 +3,9 @@
 set -euo pipefail
 set -x
 
-GLOBAL_BATCH_SIZE=36
-DEVICES=3
-MAX_EPOCH=4
+readonly GLOBAL_BATCH_SIZE="${GLOBAL_BATCH_SIZE:-"32"}"
+readonly DEVICES="${DEVICES:-"4"}"
+readonly MAX_EPOCH="${MAX_EPOCH:-"2"}"
 EXPR_NAME="pretrained_roberta_flickr_ja_mixed_${MAX_EPOCH}e_b${GLOBAL_BATCH_SIZE}"
 
 poetry run python -m torch.distributed.launch --nproc_per_node="${DEVICES}" tools/finetune.py \

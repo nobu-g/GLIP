@@ -23,6 +23,7 @@ from maskrcnn_benchmark.utils.comm import get_rank, is_main_process, synchronize
 from maskrcnn_benchmark.utils.logger import setup_logger
 from maskrcnn_benchmark.utils.metric_logger import MetricLogger, TensorboardLogger
 from maskrcnn_benchmark.utils.miscellaneous import mkdir, save_config
+from maskrcnn_benchmark.utils.model_serialization import load_state_dict
 
 # Set up custom environment before nearly anything else is imported
 # NOTE: this should be the first import (no not reorder)
@@ -49,6 +50,7 @@ def train(
     skip_optimizer_resume=False,
     save_config_path=None,
     use_tensorboard=False,
+    skip_loading_text_encoder=False,
 ):
     data_loader = make_data_loader(
         cfg,
@@ -137,8 +139,14 @@ def train(
         extra_checkpoint_data = checkpointer.load(skip_optimizer=skip_optimizer_resume)
         arguments.update(extra_checkpoint_data)
     else:
-        state_dict = checkpointer._load_file(try_to_find(cfg.MODEL.WEIGHT))
-        checkpointer._load_model(state_dict)
+        state_dict = torch.load(try_to_find(cfg.MODEL.WEIGHT), map_location=torch.device("cpu"))
+        if skip_loading_text_encoder is True:
+            load_state_dict(
+                checkpointer.model,
+                {k: v for k, v in state_dict["model"].items() if not k.startswith("module.language_backbone.body")},
+            )
+        else:
+            load_state_dict(checkpointer.model, state_dict["model"])
 
     checkpoint_period = cfg.SOLVER.CHECKPOINT_PERIOD
     if use_tensorboard:
@@ -354,6 +362,9 @@ def main():
     parser.add_argument("--use_prepared_data", action="store_true")
 
     parser.add_argument("--keep_testing", action="store_true")
+    parser.add_argument(
+        "--skip_loading_text_encoder", action="store_true", help="Whether to skip loading the weights of the encoder"
+    )
 
     args = parser.parse_args()
 
@@ -496,6 +507,7 @@ def main():
                     skip_optimizer_resume=args.skip_optimizer_resume,
                     save_config_path=output_config_path,
                     use_tensorboard=args.use_tensorboard,
+                    skip_loading_text_encoder=args.skip_loading_text_encoder,
                 )
 
                 if not args.skip_test:

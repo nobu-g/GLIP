@@ -13,6 +13,7 @@ poetry run python -m torch.distributed.launch --nproc_per_node="${DEVICES}" tool
   --skip-test \
   --use-tensorboard \
   --evaluate_only_best_on_test \
+  --skip_loading_text_encoder \
   OUTPUT_DIR "./OUTPUT/${EXPR_NAME}" \
   MODEL.DYHEAD.USE_CHECKPOINT True \
   TEST.DURING_TRAINING False \

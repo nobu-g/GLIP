@@ -9,7 +9,7 @@ readonly MAX_EPOCH="${MAX_EPOCH:-"2"}"
 EXPR_NAME="pretrained_roberta_flickr_ja_mixed_${MAX_EPOCH}e_b${GLOBAL_BATCH_SIZE}"
 
 poetry run python -m torch.distributed.launch --nproc_per_node="${DEVICES}" tools/finetune.py \
-  --config-file ./configs/finetune/glip_Swin_T_O365_GoldG_flickr-ja.yaml \
+  --config-file ./configs/finetune/flickr_ja_mixed.yaml \
   --skip-test \
   --use-tensorboard \
   --evaluate_only_best_on_test \
@@ -34,4 +34,5 @@ poetry run python -m torch.distributed.launch --nproc_per_node="${DEVICES}" tool
   SOLVER.STEP_PATIENCE 3 \
   SOLVER.CHECKPOINT_PER_EPOCH 0.5 \
   SOLVER.AUTO_TERMINATE_PATIENCE 8 \
-  SOLVER.MODEL_EMA 0.0
+  SOLVER.MODEL_EMA 0.0 \
+  "${@}"

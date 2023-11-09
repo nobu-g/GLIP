@@ -8,7 +8,7 @@ readonly EXPR_NAME="pretrained_roberta_flickr_ja_mixed_debug"
 
 # poetry run python -m torch.distributed.launch --nproc_per_node=2 tools/finetune.py \
 poetry run python -m ipdb -c continue tools/finetune.py \
-  --config-file ./configs/finetune/glip_Swin_T_O365_GoldG_flickr-ja.yaml \
+  --config-file ./configs/finetune/flickr_ja_mixed.yaml \
   --skip-test \
   --use-tensorboard \
   --evaluate_only_best_on_test \
@@ -35,33 +35,5 @@ poetry run python -m ipdb -c continue tools/finetune.py \
   SOLVER.STEP_PATIENCE 3 \
   SOLVER.CHECKPOINT_PER_EPOCH 0.1 \
   SOLVER.AUTO_TERMINATE_PATIENCE 8 \
-  SOLVER.MODEL_EMA 0.0
-
-# poetry run python -m ipdb -c continue tools/train_net.py \
-#   --config-file ./configs/finetune/glip_Swin_T_O365_GoldG_flickr-ja.yaml \
-#   --skip-test \
-#   --use-tensorboard \
-#   MODEL.BACKBONE.FREEZE_CONV_BODY_AT 2 \
-#   MODEL.DYHEAD.USE_CHECKPOINT True \
-#   MODEL.DEVICE cuda \
-#   TEST.DURING_TRAINING True \
-#   TEST.IMS_PER_BATCH 3 \
-#   TEST.EVAL_TASK detection \
-#   DATASETS.USE_OVERRIDE_CATEGORY True \
-#   DATASETS.SHUFFLE_SEED 3 \
-#   DATASETS.USE_CAPTION_PROMPT True \
-#   SOLVER.MAX_EPOCH 0 \
-#   SOLVER.MAX_ITER 10 \
-#   SOLVER.WARMUP_ITERS 500 \
-#   SOLVER.USE_AMP True \
-#   SOLVER.IMS_PER_BATCH 3 \
-#   SOLVER.WEIGHT_DECAY 0.05 \
-#   SOLVER.FIND_UNUSED_PARAMETERS False \
-#   SOLVER.TEST_WITH_INFERENCE False \
-#   SOLVER.USE_AUTOSTEP True \
-#   SOLVER.SEED 10 \
-#   SOLVER.STEP_PATIENCE 3 \
-#   SOLVER.CHECKPOINT_PER_EPOCH 1.0 \
-#   SOLVER.AUTO_TERMINATE_PATIENCE 8 \
-#   SOLVER.MODEL_EMA 0.0 \
-#   SOLVER.TUNING_HIGHLEVEL_OVERRIDE full
+  SOLVER.MODEL_EMA 0.0 \
+  "${@}"

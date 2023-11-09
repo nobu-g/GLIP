@@ -3,10 +3,10 @@
 set -euo pipefail
 set -x
 
-GLOBAL_BATCH_SIZE=36
-DEVICES=3
-MAX_EPOCH=3
-BASE_EXPR_NAME="pretrained_roberta_flickr_ja_mixed_2e_b36"
+readonly GLOBAL_BATCH_SIZE="${GLOBAL_BATCH_SIZE:-"32"}"
+readonly DEVICES="${DEVICES:-"4"}"
+readonly MAX_EPOCH="${MAX_EPOCH:-"2"}"
+readonly BASE_EXPR_NAME="${BASE_EXPR_NAME:-"pretrained_roberta_flickr_ja_mixed_2e_b36"}"
 EXPR_NAME="${BASE_EXPR_NAME}_jcre3_${MAX_EPOCH}e_b${GLOBAL_BATCH_SIZE}"
 
 poetry run python -m torch.distributed.launch --nproc_per_node="${DEVICES}" tools/finetune.py \
@@ -37,4 +37,5 @@ poetry run python -m torch.distributed.launch --nproc_per_node="${DEVICES}" tool
   SOLVER.CHECKPOINT_PER_EPOCH 1.0 \
   SOLVER.AUTO_TERMINATE_PATIENCE 8 \
   SOLVER.MODEL_EMA 0.0 \
-  SOLVER.TUNING_HIGHLEVEL_OVERRIDE full
+  SOLVER.TUNING_HIGHLEVEL_OVERRIDE full \
+  "${@}"

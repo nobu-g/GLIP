@@ -8,13 +8,16 @@ MODEL:
     CONV_BODY: "SWINT-FPN-RETINANET"
     OUT_CHANNELS: 256
     FREEZE_CONV_BODY_AT: -1
-    FREEZE: True
+    FREEZE: False
 
   LANGUAGE_BACKBONE:
-    FREEZE: False
     MODEL_TYPE: "xlm-roberta-base" # "roberta-base", "clip", "xlm-roberta-base"
     TOKENIZER_TYPE: "xlm-roberta-base"
     MASK_SPECIAL: False
+    FREEZE: False
+
+  FPN:
+    FREEZE: False  # EDIT
 
   RPN:
     USE_FPN: True

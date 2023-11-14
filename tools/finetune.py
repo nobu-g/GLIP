@@ -48,7 +48,6 @@ def train(
     distributed,
     zero_shot,
     skip_optimizer_resume=False,
-    save_config_path=None,
     use_tensorboard=False,
     skip_loading_text_encoder=False,
 ):
@@ -209,9 +208,9 @@ def test(cfg, model, distributed, verbose=False):
     log_dir = cfg.OUTPUT_DIR
     iou_types = ("bbox",)
     if cfg.MODEL.MASK_ON:
-        iou_types = iou_types + ("segm",)
+        iou_types = (*iou_types, "segm")
     if cfg.MODEL.KEYPOINT_ON:
-        iou_types = iou_types + ("keypoints",)
+        iou_types = (*iou_types, "keypoints")
     dataset_names = cfg.DATASETS.TEST
     if isinstance(dataset_names[0], (list, tuple)):
         dataset_names = [dataset for group in dataset_names for dataset in group]
@@ -435,25 +434,15 @@ def main():
                 cfg_.DATASETS.GENERAL_COPY = custom_copy
                 if args.use_prepared_data:
                     if custom_shot != 0:  # 0 means full data training
-                        cfg_.DATASETS.TRAIN = (
-                            "{}_{}_{}".format(
-                                cfg_.DATASETS.TRAIN[0],
-                                custom_shot,
-                                cfg_.DATASETS.SHUFFLE_SEED,
-                            ),
-                        )
+                        cfg_.DATASETS.TRAIN = (f"{cfg_.DATASETS.TRAIN[0]}_{custom_shot}_{cfg_.DATASETS.SHUFFLE_SEED}",)
                         try:
                             custom_shot_val = int(args.custom_shot_and_epoch_and_general_copy.split("_")[3])
-                        except:
+                        except (IndexError, ValueError):
                             custom_shot_val = custom_shot
                         cfg_.DATASETS.TEST = (
-                            "{}_{}_{}".format(
-                                cfg_.DATASETS.TEST[0],
-                                custom_shot_val,
-                                cfg_.DATASETS.SHUFFLE_SEED,
-                            ),
+                            f"{cfg_.DATASETS.TEST[0]}_{custom_shot_val}_{cfg_.DATASETS.SHUFFLE_SEED}",
                         )
-                        if custom_shot_val == 1 or custom_shot_val == 3:
+                        if custom_shot_val in (1, 3):
                             cfg_.DATASETS.GENERAL_COPY_TEST = 4  # to avoid less images than GPUs
                 else:
                     cfg_.DATASETS.FEW_SHOT = custom_shot
@@ -505,7 +494,6 @@ def main():
                     args.distributed,
                     args.skip_train or custom_shot == 10000,
                     skip_optimizer_resume=args.skip_optimizer_resume,
-                    save_config_path=output_config_path,
                     use_tensorboard=args.use_tensorboard,
                     skip_loading_text_encoder=args.skip_loading_text_encoder,
                 )

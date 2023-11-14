@@ -11,9 +11,10 @@ from maskrcnn_benchmark.engine.predictor_glip import GLIPDemo
 from maskrcnn_benchmark.structures.bounding_box import BoxList
 from PIL import Image, ImageFile
 from rhoknp import KNP, Document
-from tools.util import CamelCaseDataClassJsonMixin, Rectangle, get_core_expression
 from transformers import BatchEncoding
 from yacs.config import CfgNode
+
+from tools.util import CamelCaseDataClassJsonMixin, Rectangle, get_core_expression
 
 torch.set_grad_enabled(False)
 

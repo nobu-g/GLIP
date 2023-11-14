@@ -25,9 +25,9 @@ def run_test(cfg, model, distributed, log_dir):
     torch.cuda.empty_cache()  # TODO check if it helps
     iou_types = ("bbox",)
     if cfg.MODEL.MASK_ON:
-        iou_types = iou_types + ("segm",)
+        iou_types = (*iou_types, "segm")
     if cfg.MODEL.KEYPOINT_ON:
-        iou_types = iou_types + ("keypoints",)
+        iou_types = (*iou_types, "keypoints")
     dataset_names = cfg.DATASETS.TEST
     if isinstance(dataset_names[0], (list, tuple)):
         dataset_names = [dataset for group in dataset_names for dataset in group]

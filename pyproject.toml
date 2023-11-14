@@ -61,15 +61,32 @@ cuda = []
 line-length = 120
 target-version = ["py38", "py39", "py310", "py311"]
 
-[tool.isort]
-line_length = 120
-py_version = 39
-profile = "black"
-src_paths = ["src"]
+[tool.ruff]
+line-length = 120
+indent-width = 4
+target-version = "py38"
+ignore = [
+    "PLR0911",  # Too many return statements
+    "PLR0912",  # Too many branches
+    "PLR0913",  # Too many arguments in function definition
+    "PLR0915",  # Too many statements
+    "E501",  # Line too long
+    "RUF001",  # String contains ambiguous `ノ` (KATAKANA LETTER NO). Did you mean `/` (SOLIDUS)?
+    "RUF002",  # Docstring contains ambiguous `，` (FULLWIDTH COMMA). Did you mean `,` (COMMA)?
+    "RUF003",  # Comment contains ambiguous `（` (FULLWIDTH LEFT PARENTHESIS). Did you mean `(` (LEFT PARENTHESIS)?
+    "COM812",  # Trailing comma missing
+    "PLR2004",  # Magic value used in comparison
+]
+select = ["F", "E", "W", "I", "B", "PL", "PD", "NPY", "RUF", "UP", "TID", "COM", "PT", "ARG", "PYI"]
 
-[tool.flake8]
-ignore = ["E203", "E501", "W503"]
-max-line-length = 120
+[tool.ruff.per-file-ignores]
+"tools/cityscapes/instances2dict_with_polygons.py" = ["ALL"]
+
+[tool.ruff.lint.flake8-tidy-imports]
+ban-relative-imports = "all"
+
+[tool.ruff.lint.isort]
+known-third-party = ["maskrcnn_benchmark"]
 
 [build-system]
 requires = ["poetry-core"]

@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from typing import Any, List, Tuple, Union
+from typing import Any, Tuple, Union
 
 from dataclasses_json import DataClassJsonMixin, LetterCase, config
 from rhoknp import BasePhrase

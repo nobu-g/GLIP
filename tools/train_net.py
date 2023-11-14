@@ -218,7 +218,7 @@ def main():
 
     seed = cfg.SOLVER.SEED + args.local_rank
     torch.manual_seed(seed)
-    np.random.seed(seed)
+    np.random.seed(seed)  # noqa: NPY002
     random.seed(seed)
 
     output_dir = cfg.OUTPUT_DIR
@@ -245,7 +245,7 @@ def main():
 
     save_config(cfg, output_config_path)
 
-    model = train(
+    _ = train(
         cfg=cfg,
         local_rank=args.local_rank,
         distributed=args.distributed,

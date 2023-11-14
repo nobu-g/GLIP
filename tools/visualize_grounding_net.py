@@ -7,29 +7,25 @@ import os
 from dataclasses import dataclass
 from io import BytesIO
 from pathlib import Path
-from typing import Dict, List, Optional, Union
+from typing import Dict, List, Union
 
-import matplotlib.pylab as pylab
 import matplotlib.pyplot as plt
 import numpy as np
 import requests
 import torch
 import torch.distributed as dist
-from dataclasses_json import DataClassJsonMixin, LetterCase, config
 from maskrcnn_benchmark.config import cfg
 from maskrcnn_benchmark.data import make_data_loader
 from maskrcnn_benchmark.engine.inference import inference
-from maskrcnn_benchmark.engine.predictor_glip import GLIPDemo
 from maskrcnn_benchmark.modeling.detector import build_detection_model
 from maskrcnn_benchmark.utils.checkpoint import DetectronCheckpointer
 from maskrcnn_benchmark.utils.logger import setup_logger
 from maskrcnn_benchmark.utils.miscellaneous import mkdir
+from matplotlib import pylab
 from PIL import Image
-from tools.util import CamelCaseDataClassJsonMixin, Rectangle
 from transformers import BatchEncoding
 
-# from maskrcnn_benchmark.utils.env import setup_environment  # noqa F401 isort:skip
-# from maskrcnn_benchmark.utils.comm import get_rank, synchronize
+from tools.util import CamelCaseDataClassJsonMixin, Rectangle
 
 pylab.rcParams["figure.figsize"] = 20, 12
 
@@ -59,7 +55,7 @@ class GLIPPrediction(CamelCaseDataClassJsonMixin):
 def load_image(url_or_file_name: str) -> np.ndarray:
     try:
         response = requests.get(url_or_file_name)
-    except:
+    except requests.exceptions.RequestException:
         response = None
     if response is None:
         pil_image = Image.open(url_or_file_name).convert("RGB")
@@ -204,9 +200,9 @@ def main():
         assert cfg_.TEST.IMS_PER_BATCH == 1
         iou_types = ("bbox",)
         if cfg_.MODEL.MASK_ON:
-            iou_types = iou_types + ("segm",)
+            iou_types = (*iou_types, "segm")
         if cfg_.MODEL.KEYPOINT_ON:
-            iou_types = iou_types + ("keypoints",)
+            iou_types = (*iou_types, "keypoints")
         dataset_names = cfg_.DATASETS.TEST
         assert len(dataset_names) == 1
         dataset_name = dataset_names[0]

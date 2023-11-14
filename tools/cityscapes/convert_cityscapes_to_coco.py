@@ -58,8 +58,8 @@ def convert_coco_stuff_mat(data_dir, out_dir):
         file_list = os.path.join(data_dir, "%s.txt")
         images = []
         with open(file_list % data_set) as f:
-            for img_id, img_name in enumerate(f):
-                img_name = img_name.replace("coco", "COCO").strip("\n")
+            for img_id, orig_img_name in enumerate(f):
+                img_name = orig_img_name.replace("coco", "COCO").strip("\n")
                 image = {}
                 mat_file = os.path.join(data_dir, "annotations/%s.mat" % img_name)
                 data = h5py.File(mat_file, "r")
@@ -80,14 +80,6 @@ def convert_coco_stuff_mat(data_dir, out_dir):
         print("Num images: %s" % len(images))
         with open(os.path.join(out_dir, json_name % data_set), "wb") as outfile:
             outfile.write(json.dumps(ann_dict))
-
-
-# for Cityscapes
-def getLabelID(self, instID):
-    if instID < 1000:
-        return instID
-    else:
-        return int(instID / 1000)
 
 
 def convert_cityscapes_instance_only(data_dir, out_dir):
@@ -126,12 +118,12 @@ def convert_cityscapes_instance_only(data_dir, out_dir):
         "bicycle",
     ]
 
-    for data_set, ann_dir in zip(sets, ann_dirs):
+    for data_set, orig_ann_dir in zip(sets, ann_dirs):
         print("Starting %s" % data_set)
         ann_dict = {}
         images = []
         annotations = []
-        ann_dir = os.path.join(data_dir, ann_dir)
+        ann_dir = os.path.join(data_dir, orig_ann_dir)
         for root, _, files in os.walk(ann_dir):
             for filename in files:
                 if filename.endswith(ends_in % data_set.split("_")[0]):

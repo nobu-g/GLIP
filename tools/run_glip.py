@@ -12,7 +12,7 @@ from maskrcnn_benchmark.structures.bounding_box import BoxList
 from PIL import Image, ImageFile
 from rhoknp import KNP, Document
 from tools.util import CamelCaseDataClassJsonMixin, Rectangle, get_core_expression
-from transformers import BatchEncoding, CharSpan
+from transformers import BatchEncoding
 from yacs.config import CfgNode
 
 torch.set_grad_enabled(False)
@@ -77,7 +77,7 @@ def apply_mask(image, mask, color, alpha=0.5):
 
 
 def plot_results(
-    image: ImageFile, prediction: GLIPPrediction, export_dir: Path, confidence_threshold: float = 0.8
+    image: ImageFile, prediction: GLIPPrediction, output_file: Path, confidence_threshold: float = 0.8
 ) -> None:
     plt.figure(figsize=(16, 10))
     np_image = np.array(image)
@@ -105,8 +105,8 @@ def plot_results(
 
     plt.imshow(np_image)
     plt.axis("off")
-    plt.savefig(export_dir / "output.png")
-    plt.show()
+    plt.savefig(output_file)
+    # plt.show()
 
 
 def flickr_post_process(output: BoxList, positive_map_label_to_token: Dict[int, List[int]], plus: int) -> tuple:
@@ -260,8 +260,10 @@ def main():
         caption = knp.apply_to_document(args.text)
 
     predictions = predict_glip(cfg, images, caption)
+    assert len(predictions) == len(images)
     if args.plot:
-        plot_results(images[0], predictions[0], export_dir, confidence_threshold=0.5)
+        for prediction, image, image_file in zip(predictions, images, args.image_files):
+            plot_results(image, prediction, export_dir / Path(image_file).name, confidence_threshold=0.5)
 
     for image_file, prediction in zip(args.image_files, predictions):
         export_dir.joinpath(f"{Path(image_file).stem}.json").write_text(

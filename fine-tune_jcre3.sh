@@ -10,14 +10,15 @@ readonly BASE_EXPR_NAME="${BASE_EXPR_NAME:-"pretrained_roberta_flickr_ja_mixed_2
 EXPR_NAME="${BASE_EXPR_NAME}_jcre3_${MAX_EPOCH}e_b${GLOBAL_BATCH_SIZE}"
 
 poetry run python -m torch.distributed.launch --nproc_per_node="${DEVICES}" tools/finetune.py \
-  --config-file ./configs/finetune/glip_Swin_T_O365_GoldG_jcre3.yaml \
+  --config-file ./configs/finetune/jcre3.yaml \
   --skip-test \
   --use-tensorboard \
   --evaluate_only_best_on_test \
   OUTPUT_DIR "./OUTPUT/${EXPR_NAME}" \
-  MODEL.WEIGHT "./OUTPUT/${BASE_EXPR_NAME}/ft_task_1/model_0016020.pth" \
-  MODEL.BACKBONE.FREEZE_CONV_BODY_AT 2 \
+  MODEL.WEIGHT "./OUTPUT/${BASE_EXPR_NAME}/ft_task_1/model_0032040.pth" \
   MODEL.DYHEAD.USE_CHECKPOINT True \
+  MODEL.LANGUAGE_BACKBONE.USE_CHECKPOINT True \
+  MODEL.BACKBONE.USE_CHECKPOINT True \
   TEST.DURING_TRAINING False \
   TEST.IMS_PER_BATCH 8 \
   TEST.EVAL_TASK detection \

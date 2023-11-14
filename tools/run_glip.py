@@ -21,8 +21,8 @@ torch.set_grad_enabled(False)
 
 @dataclass(frozen=True)
 class BoundingBox(CamelCaseDataClassJsonMixin):
+    image_id: str
     rect: Rectangle
-    class_name: str
     confidence: float
 
 
@@ -127,7 +127,7 @@ def flickr_post_process(output: BoxList, positive_map_label_to_token: Dict[int, 
     )
 
 
-def predict_glip(cfg: CfgNode, images: list, caption: Document) -> List[GLIPPrediction]:
+def predict_glip(cfg: CfgNode, images: list, image_ids: list[str], caption: Document) -> List[GLIPPrediction]:
     if len(images) == 0:
         return []
 
@@ -164,7 +164,8 @@ def predict_glip(cfg: CfgNode, images: list, caption: Document) -> List[GLIPPred
         plus = 0
 
     predictions: List[GLIPPrediction] = []
-    for image in images:
+    assert len(images) == len(image_ids)
+    for image, image_id in zip(images, image_ids):
         # convert to BGR format
         numpy_image = np.array(image)[:, :, [2, 1, 0]]
         output: BoxList = glip_demo.inference(numpy_image, caption.text, custom_entity=custom_entity)
@@ -178,8 +179,8 @@ def predict_glip(cfg: CfgNode, images: list, caption: Document) -> List[GLIPPred
         for boxes, scores, (_, token_indices) in zip(boxes_list, scores_list, positive_map_label_to_token.items()):
             bounding_boxes: List[BoundingBox] = [
                 BoundingBox(
+                    image_id=image_id,
                     rect=Rectangle(x1=box[0], y1=box[1], x2=box[2], y2=box[3]),
-                    class_name="",
                     confidence=score,
                 )
                 for box, score in zip(boxes, scores)
@@ -254,22 +255,21 @@ def main():
     export_dir.mkdir(exist_ok=True)
 
     images: list = [Image.open(image_file).convert("RGB") for image_file in args.image_files]
+    image_ids: list[str] = [Path(image_file).stem for image_file in args.image_files]
     if args.caption_file is not None:
         caption = Document.from_knp(Path(args.caption_file).read_text())
     else:
         knp = KNP(options=["-dpnd-fast", "-tab"])
         caption = knp.apply_to_document(args.text)
 
-    predictions = predict_glip(cfg, images, caption)
+    predictions = predict_glip(cfg, images, image_ids, caption)
     assert len(predictions) == len(images)
     if args.plot:
-        for prediction, image, image_file in zip(predictions, images, args.image_files):
-            plot_results(image, prediction, export_dir / Path(image_file).name, confidence_threshold=0.5)
+        for prediction, image, image_id in zip(predictions, images, image_ids):
+            plot_results(image, prediction, export_dir / f"{image_id}.png", confidence_threshold=0.5)
 
-    for image_file, prediction in zip(args.image_files, predictions):
-        export_dir.joinpath(f"{Path(image_file).stem}.json").write_text(
-            prediction.to_json(indent=2, ensure_ascii=False)
-        )
+    for image_id, prediction in zip(image_ids, predictions):
+        export_dir.joinpath(f"{image_id}.json").write_text(prediction.to_json(indent=2, ensure_ascii=False))
 
 
 if __name__ == "__main__":

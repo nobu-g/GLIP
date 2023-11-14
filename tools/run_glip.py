@@ -99,7 +99,8 @@ def plot_results(
                 f"{label}: {score:0.2f}",
                 fontsize=15,
                 bbox=dict(facecolor=color, alpha=0.8),
-                fontname="Hiragino Maru Gothic Pro",
+                # fontname="Hiragino Maru Gothic Pro",
+                fontname="IPAexGothic",
             )
 
     plt.imshow(np_image)
@@ -132,7 +133,7 @@ def predict_glip(cfg: CfgNode, images: list, caption: Document) -> List[GLIPPred
     glip_demo = GLIPDemo(
         cfg,
         min_image_size=800,
-        confidence_threshold=0.7,
+        confidence_threshold=0.0,
         show_mask_heatmaps=False,
     )
     encoded: BatchEncoding = glip_demo.tokenizer(caption.text).encodings[0]
@@ -149,6 +150,13 @@ def predict_glip(cfg: CfgNode, images: list, caption: Document) -> List[GLIPPred
             custom_entity.append([[core_start, core_end]])
         char_index += len(base_phrase.text)
 
+    char_index_to_phrase_index: Dict[int, int] = {}
+    char_index = 0
+    for base_phrase in caption.base_phrases:
+        for _ in range(len(base_phrase.text)):
+            char_index_to_phrase_index[char_index] = base_phrase.global_index
+            char_index += 1
+
     if cfg.MODEL.RPN_ARCHITECTURE == "VLDYHEAD":
         plus = 1
     else:
@@ -162,52 +170,36 @@ def predict_glip(cfg: CfgNode, images: list, caption: Document) -> List[GLIPPred
         positive_map_label_to_token: Dict[int, List[int]] = glip_demo.positive_map_label_to_token
         boxes_list, scores_list = flickr_post_process(output, positive_map_label_to_token, plus)
 
+        phrase_index_to_bounding_boxes: Dict[int, List[BoundingBox]] = {}
         assert (
             len(boxes_list) == len(scores_list) == len(positive_map_label_to_token)
         ), f"{len(boxes_list)}, {len(scores_list)}, {len(positive_map_label_to_token)}"
         for boxes, scores, (_, token_indices) in zip(boxes_list, scores_list, positive_map_label_to_token.items()):
+            bounding_boxes: List[BoundingBox] = [
+                BoundingBox(
+                    rect=Rectangle(x1=box[0], y1=box[1], x2=box[2], y2=box[3]),
+                    class_name="",
+                    confidence=score,
+                )
+                for box, score in zip(boxes, scores)
+            ]
+
             # ensure token_indeices are consecutive
             assert token_indices == list(range(token_indices[0], token_indices[-1] + 1))
-            current_token_index = 1  # skip the [CLS] token
-            current_phrase_index = 0
-            phrase_predictions = []
-            if token_indices[0] > current_token_index:
-                char_start_index = encoded.token_to_chars(current_token_index)[0]
-                char_end_index = encoded.token_to_chars(token_indices[0])[0]
-                # token_ids = encoded.ids[current_token_index:token_indices[0]]
-                phrase_predictions.append(
-                    PhrasePrediction(
-                        phrase_index=current_phrase_index,
-                        phrase=caption.text[char_start_index:char_end_index],
-                        bounding_boxes=[],
-                    )
-                )
-                current_phrase_index += 1
-                current_token_index = token_indices[0]
-            else:
-                assert token_indices[0] == current_token_index
-
-            bounding_boxes: List[BoundingBox] = []
-            for box, score in zip(boxes, scores):
-                bounding_boxes.append(
-                    BoundingBox(
-                        rect=Rectangle(x1=box[0], y1=box[1], x2=box[2], y2=box[3]),
-                        class_name="",
-                        confidence=score,
-                    )
-                )
-
             char_start_index = encoded.token_to_chars(token_indices[0])[0]
             char_end_index = encoded.token_to_chars(token_indices[-1])[1]
-            phrase_predictions.append(
-                PhrasePrediction(
-                    phrase_index=current_phrase_index,
-                    phrase=caption.text[char_start_index:char_end_index],
-                    bounding_boxes=bounding_boxes,
-                )
+            for char_index in range(char_start_index, char_end_index):
+                phrase_index = char_index_to_phrase_index[char_index]
+                phrase_index_to_bounding_boxes[phrase_index] = bounding_boxes
+
+        phrase_predictions: List[PhrasePrediction] = [
+            PhrasePrediction(
+                phrase_index=base_phrase.global_index,
+                phrase=base_phrase.text,
+                bounding_boxes=phrase_index_to_bounding_boxes.get(base_phrase.global_index, []),
             )
-            current_phrase_index += 1
-            current_token_index = token_indices[-1] + 1
+            for base_phrase in caption.base_phrases
+        ]
 
         predictions.append(
             GLIPPrediction(
@@ -239,15 +231,14 @@ def main():
         "--text", type=str, default="5 people each holding an umbrella", help="split text to perform grounding."
     )
     parser.add_argument("--caption-file", type=str, help="Path to Juman++ file for caption.")
-    # parser.add_argument(
-    #     '--backbone-name', type=str, default='timm_tf_efficientnet_b3_ns', help='backbone image encoder name'
-    # )
     parser.add_argument("--text-encoder", type=str, default=None, help="text encoder name")
     # parser.add_argument("--batch-size", "--bs", type=int, default=32, help="Batch size.")
     parser.add_argument("--export-dir", type=str, help="Path to directory to export results.")
     parser.add_argument("--plot", action="store_true", help="Plot results.")
     args = parser.parse_args()
 
+    cfg.local_rank = 0
+    cfg.num_gpus = 1
     cfg.merge_from_file(args.config_file)
     cfg.merge_from_list(args.opts)
     cfg.merge_from_list(["MODEL.WEIGHT", args.model])
@@ -265,11 +256,12 @@ def main():
     if args.caption_file is not None:
         caption = Document.from_knp(Path(args.caption_file).read_text())
     else:
-        caption = KNP().apply_to_document(args.text)
+        knp = KNP(options=["-dpnd-fast", "-tab"])
+        caption = knp.apply_to_document(args.text)
 
     predictions = predict_glip(cfg, images, caption)
     if args.plot:
-        plot_results(images[0], predictions[0], export_dir)
+        plot_results(images[0], predictions[0], export_dir, confidence_threshold=0.5)
 
     for image_file, prediction in zip(args.image_files, predictions):
         export_dir.joinpath(f"{Path(image_file).stem}.json").write_text(

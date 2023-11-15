@@ -28,16 +28,16 @@ class BoundingBox(CamelCaseDataClassJsonMixin):
 
 @dataclass(frozen=True)
 class PhrasePrediction(CamelCaseDataClassJsonMixin):
-    phrase_index: int
-    phrase: str
+    index: int
+    text: str
     bounding_boxes: List[BoundingBox]
 
 
 @dataclass(frozen=True)
 class GLIPPrediction(CamelCaseDataClassJsonMixin):
     doc_id: str
-    phrase_predictions: List[BoundingBox]
-    phrases: List[str]
+    image_id: str
+    phrases: List[PhrasePrediction]
 
 
 # for output bounding box post-processing
@@ -85,13 +85,13 @@ def plot_results(
     ax = plt.gca()
     colors = COLORS * 100
 
-    for phrase_prediction in prediction.phrase_predictions:
+    for phrase_prediction in prediction.phrases:
         for bounding_box in phrase_prediction.bounding_boxes:
             rect = bounding_box.rect
             score = bounding_box.confidence
             if score < confidence_threshold:
                 continue
-            label = phrase_prediction.phrase
+            label = phrase_prediction.text
             color = colors.pop()
             ax.add_patch(plt.Rectangle((rect.x1, rect.y1), rect.w, rect.h, fill=False, color=color, linewidth=3))
             ax.text(
@@ -196,8 +196,8 @@ def predict_glip(cfg: CfgNode, images: list, image_ids: list[str], caption: Docu
 
         phrase_predictions: List[PhrasePrediction] = [
             PhrasePrediction(
-                phrase_index=base_phrase.global_index,
-                phrase=base_phrase.text,
+                index=base_phrase.global_index,
+                text=base_phrase.text,
                 bounding_boxes=phrase_index_to_bounding_boxes.get(base_phrase.global_index, []),
             )
             for base_phrase in caption.base_phrases
@@ -206,8 +206,8 @@ def predict_glip(cfg: CfgNode, images: list, image_ids: list[str], caption: Docu
         predictions.append(
             GLIPPrediction(
                 doc_id=caption.doc_id,
-                phrase_predictions=phrase_predictions,
-                phrases=[pp.phrase for pp in phrase_predictions],
+                image_id=image_id,
+                phrases=phrase_predictions,
             )
         )
     return predictions

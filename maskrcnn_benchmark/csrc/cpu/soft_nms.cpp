@@ -9,7 +9,7 @@ std::pair<at::Tensor, at::Tensor> soft_nms_cpu_kernel(const at::Tensor& dets,
                                                       const float sigma) {
   AT_ASSERTM(!dets.device().is_cuda(), "dets must be a CPU tensor");
   AT_ASSERTM(!scores.device().is_cuda(), "scores must be a CPU tensor");
-  AT_ASSERTM(dets.type() == scores.type(), "dets should have the same type as scores");
+  AT_ASSERTM(dets.options().type_equal(scores.options()), "dets should have the same type as scores");
 
   if (dets.numel() == 0) {
     return std::make_pair(at::empty({0}, dets.options().dtype(at::kLong).device(at::kCPU)),

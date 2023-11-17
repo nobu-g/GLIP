@@ -8,7 +8,7 @@ at::Tensor nms_cpu_kernel(const at::Tensor& dets,
                           const float threshold) {
   AT_ASSERTM(!dets.device().is_cuda(), "dets must be a CPU tensor");
   AT_ASSERTM(!scores.device().is_cuda(), "scores must be a CPU tensor");
-  AT_ASSERTM(dets.options() == scores.options() "dets should have the same type as scores");
+  AT_ASSERTM(dets.options().type_equal(scores.options()), "dets should have the same type as scores");
 
   if (dets.numel() == 0) {
     return at::empty({0}, dets.options().dtype(at::kLong).device(at::kCPU));

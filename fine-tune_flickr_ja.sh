@@ -5,7 +5,7 @@ set -x
 
 readonly GLOBAL_BATCH_SIZE="${GLOBAL_BATCH_SIZE:-"32"}"
 readonly DEVICES="${DEVICES:-"4"}"
-readonly MAX_EPOCH="${MAX_EPOCH:-"2"}"
+readonly MAX_EPOCH="${MAX_EPOCH:-"3"}"
 EXPR_NAME="pretrained_roberta_flickr_ja_mixed_${MAX_EPOCH}e_b${GLOBAL_BATCH_SIZE}"
 
 poetry run python -m torch.distributed.launch --nproc_per_node="${DEVICES}" tools/finetune.py \
@@ -16,6 +16,8 @@ poetry run python -m torch.distributed.launch --nproc_per_node="${DEVICES}" tool
   --skip_loading_text_encoder \
   OUTPUT_DIR "./OUTPUT/${EXPR_NAME}" \
   MODEL.DYHEAD.USE_CHECKPOINT True \
+  MODEL.LANGUAGE_BACKBONE.USE_CHECKPOINT True \
+  MODEL.BACKBONE.USE_CHECKPOINT True \
   TEST.DURING_TRAINING False \
   TEST.IMS_PER_BATCH 8 \
   TEST.EVAL_TASK detection \

@@ -714,7 +714,7 @@ class VLDyHead(torch.nn.Module):
 
         # contrastive alignment head
         if self.cfg.MODEL.DYHEAD.FUSE_CONFIG.USE_CONTRASTIVE_ALIGN_LOSS:
-            assert self.cfg.MODEL.DYHEAD.FUSE_CONFIG.USE_DOT_PRODUCT_TOKEN_LOSS == False
+            assert self.cfg.MODEL.DYHEAD.FUSE_CONFIG.USE_DOT_PRODUCT_TOKEN_LOSS is False
             contrastive_hdim = cfg.MODEL.DYHEAD.FUSE_CONFIG.CONTRASTIVE_HIDDEN_DIM
             self.contrastive_align_projection_image = nn.Conv2d(channels, num_anchors * contrastive_hdim, kernel_size=1)
             self.contrastive_align_projection_text = nn.Linear(channels, contrastive_hdim, bias=True)
@@ -722,7 +722,7 @@ class VLDyHead(torch.nn.Module):
 
         # dot product soft token head
         if self.cfg.MODEL.DYHEAD.FUSE_CONFIG.USE_DOT_PRODUCT_TOKEN_LOSS:
-            assert self.cfg.MODEL.DYHEAD.FUSE_CONFIG.USE_CONTRASTIVE_ALIGN_LOSS == False
+            assert self.cfg.MODEL.DYHEAD.FUSE_CONFIG.USE_CONTRASTIVE_ALIGN_LOSS is False
             self.dot_product_projection_image = nn.Identity()
             self.dot_product_projection_text = nn.Linear(
                 self.cfg.MODEL.LANGUAGE_BACKBONE.LANG_DIM,

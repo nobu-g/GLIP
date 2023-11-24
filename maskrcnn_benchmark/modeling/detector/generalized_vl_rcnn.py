@@ -124,6 +124,9 @@ class GeneralizedVLRCNN(nn.Module):
         if self.freeze_language_backbone:
             for p in self.language_backbone.parameters():
                 p.requires_grad = False
+            # Unfreeze the last layer of the language backbone
+            for p in self.language_backbone[0].model.encoder.layer[-1].parameters():
+                p.requires_grad = True
 
         self.use_mlm_loss = cfg.MODEL.DYHEAD.FUSE_CONFIG.MLM_LOSS
         self.mlm_loss_for_only_positives = cfg.MODEL.DYHEAD.FUSE_CONFIG.MLM_LOSS_FOR_ONLY_POSITIVES
@@ -189,9 +192,11 @@ class GeneralizedVLRCNN(nn.Module):
                         p.requires_grad = True
 
         if self.freeze_language_backbone:
-            self.language_backbone.eval()
             for p in self.language_backbone.parameters():
                 p.requires_grad = False
+            # Unfreeze the last layer of the language backbone
+            for p in self.language_backbone[0].model.encoder.layer[-1].parameters():
+                p.requires_grad = True
 
     def forward(
         self,
@@ -259,12 +264,7 @@ class GeneralizedVLRCNN(nn.Module):
                     "input_ids": input_ids,
                     "attention_mask": tokenized.attention_mask,
                 }
-
-                if self.cfg.MODEL.LANGUAGE_BACKBONE.FREEZE:
-                    with torch.no_grad():
-                        language_dict_features = self.language_backbone(tokenizer_input)
-                else:
-                    language_dict_features = self.language_backbone(tokenizer_input)
+                language_dict_features = self.language_backbone(tokenizer_input)
 
                 # ONE HOT
                 if self.cfg.DATASETS.ONE_HOT:
@@ -474,12 +474,7 @@ class GeneralizedVLRCNN(nn.Module):
             "input_ids": tokenized.input_ids,
             "attention_mask": tokenized.attention_mask,
         }
-
-        if self.cfg.MODEL.LANGUAGE_BACKBONE.FREEZE:
-            with torch.no_grad():
-                language_dict_features = self.language_backbone(tokenizer_input)
-        else:
-            language_dict_features = self.language_backbone(tokenizer_input)
+        language_dict_features = self.language_backbone(tokenizer_input)
 
         assert not self.cfg.DATASETS.ONE_HOT
         assert not self.cfg.MODEL.LANGUAGE_BACKBONE.MASK_SPECIAL

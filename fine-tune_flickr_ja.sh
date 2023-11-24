@@ -25,7 +25,6 @@ poetry run python -m torch.distributed.launch --nproc_per_node="${DEVICES}" tool
   DATASETS.SHUFFLE_SEED 3 \
   DATASETS.USE_CAPTION_PROMPT True \
   SOLVER.MAX_EPOCH "${MAX_EPOCH}" \
-  SOLVER.WARMUP_ITERS 100 \
   SOLVER.USE_AMP True \
   SOLVER.IMS_PER_BATCH "${GLOBAL_BATCH_SIZE}" \
   SOLVER.WEIGHT_DECAY 0.05 \

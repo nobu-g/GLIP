@@ -14,6 +14,7 @@ poetry run python -m torch.distributed.launch --nproc_per_node="${DEVICES}" tool
   --use-tensorboard \
   --evaluate_only_best_on_test \
   --skip_loading_text_encoder \
+  --skip_optimizer_resume \
   OUTPUT_DIR "./OUTPUT/${EXPR_NAME}" \
   MODEL.DYHEAD.USE_CHECKPOINT True \
   MODEL.LANGUAGE_BACKBONE.USE_CHECKPOINT True \

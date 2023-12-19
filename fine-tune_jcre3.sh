@@ -38,5 +38,4 @@ poetry run python -m torch.distributed.launch --nproc_per_node="${DEVICES}" tool
   SOLVER.CHECKPOINT_PER_EPOCH 1.0 \
   SOLVER.AUTO_TERMINATE_PATIENCE 8 \
   SOLVER.MODEL_EMA 0.0 \
-  SOLVER.TUNING_HIGHLEVEL_OVERRIDE full \
   "${@}"

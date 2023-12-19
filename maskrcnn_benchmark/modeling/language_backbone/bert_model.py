@@ -18,7 +18,10 @@ class BertEncoder(nn.Module):
 
         config = AutoConfig.from_pretrained(self.model_type)
         config.gradient_checkpointing = self.cfg.MODEL.LANGUAGE_BACKBONE.USE_CHECKPOINT
-        self.model = AutoModel.from_pretrained(self.model_type, add_pooling_layer=False, config=config)
+        if "deberta" in self.model_type:
+            self.model = AutoModel.from_pretrained(self.model_type, config=config)
+        else:
+            self.model = AutoModel.from_pretrained(self.model_type, add_pooling_layer=False, config=config)
         self.num_layers = cfg.MODEL.LANGUAGE_BACKBONE.N_LAYERS
 
     def forward(self, x):

@@ -37,7 +37,6 @@ class BertEncoder(nn.Module):
             )
             # outputs has 13 layers, 1 input layer and 12 hidden layers
             encoded_layers = outputs.hidden_states[1:]
-            features = None
             features = torch.stack(encoded_layers[-self.num_layers :], 1).mean(1)
 
             # language embedding has shape [len(phrase), seq_len, language_dim]
@@ -57,7 +56,6 @@ class BertEncoder(nn.Module):
             # outputs has 13 layers, 1 input layer and 12 hidden layers
             encoded_layers = outputs.hidden_states[1:]
 
-            features = None
             features = torch.stack(encoded_layers[-self.num_layers :], 1).mean(1)
             # language embedding has shape [len(phrase), seq_len, language_dim]
             features = features / self.num_layers

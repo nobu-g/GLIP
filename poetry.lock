@@ -1803,6 +1803,23 @@ requests = ">=2.0.0"
 rsa = ["oauthlib[signedtoken] (>=3.0.0)"]
 
 [[package]]
+name = "rhoknp"
+version = "1.6.0"
+description = "Yet another Python binding for Juman++/KNP/KWJA"
+optional = false
+python-versions = ">=3.8,<4.0"
+files = [
+    {file = "rhoknp-1.6.0-py3-none-any.whl", hash = "sha256:4372e2601ba7eae9a047fccbc2fe6d6668a06682c2035424ab247e38f22771c7"},
+    {file = "rhoknp-1.6.0.tar.gz", hash = "sha256:da63b90dd58d618169e65a9d44d635cb0b4ba32a566c495028f790f7373e4eb9"},
+]
+
+[package.dependencies]
+typing-extensions = {version = ">=4.4", markers = "python_version < \"3.12\""}
+
+[package.extras]
+cli = ["PyYAML (>=6.0,<7.0)", "fastapi (>=0.92.0)", "jinja2 (>=3.1,<4.0)", "pygments (>=2.16,<3.0)", "rich (>=12.6)", "typer (>=0.7)", "uvicorn (>=0.21.0)"]
+
+[[package]]
 name = "rsa"
 version = "4.9"
 description = "Pure-Python RSA implementation"
@@ -2588,4 +2605,4 @@ cuda = []
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.9,<3.10"
-content-hash = "3bb7d2f8bcf05e008a637c417ae9198da3dba32c2cd21b7958c025e56823249e"
+content-hash = "0a452db170eaa2205657da14bbc3e14388685755d5c69cee0017d233103c46c8"

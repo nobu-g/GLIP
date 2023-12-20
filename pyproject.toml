@@ -20,7 +20,7 @@ torchvision =[
     { platform = "darwin", version = "^0.11.3" },
     { platform = "linux", version = "^0.10.1" },
 ]
-transformers = "~4.29.2"
+transformers = "~4.35.2"
 numpy = "^1.24.3"
 einops = "^0.6.1"
 shapely = "^2.0.1"

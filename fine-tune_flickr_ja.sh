@@ -5,7 +5,7 @@ set -x
 
 readonly GLOBAL_BATCH_SIZE="${GLOBAL_BATCH_SIZE:-"32"}"
 readonly DEVICES="${DEVICES:-"4"}"
-readonly MAX_EPOCH="${MAX_EPOCH:-"3"}"
+readonly MAX_EPOCH="${MAX_EPOCH:-"4"}"
 EXPR_NAME="pretrained_deberta_flickr_ja_mixed_${MAX_EPOCH}e_b${GLOBAL_BATCH_SIZE}"
 
 poetry run python -m torch.distributed.launch --nproc_per_node="${DEVICES}" tools/finetune.py \

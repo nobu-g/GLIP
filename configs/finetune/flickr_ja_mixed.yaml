@@ -11,8 +11,8 @@ MODEL:
     FREEZE: True  # EDIT
 
   LANGUAGE_BACKBONE:
-    MODEL_TYPE: "microsoft/mdeberta-v3-base" # "roberta-base", "clip", "xlm-roberta-base", "microsoft/mdeberta-v3-base"
-    TOKENIZER_TYPE: "microsoft/mdeberta-v3-base"
+    MODEL_TYPE: "xlm-roberta-base" # "roberta-base", "clip", "xlm-roberta-base", "microsoft/mdeberta-v3-base"
+    TOKENIZER_TYPE: "xlm-roberta-base"
     MASK_SPECIAL: False
     FREEZE: True  # EDIT
 

@@ -6,7 +6,7 @@ set -x
 readonly GLOBAL_BATCH_SIZE="${GLOBAL_BATCH_SIZE:-"32"}"
 readonly DEVICES="${DEVICES:-"4"}"
 readonly MAX_EPOCH="${MAX_EPOCH:-"2"}"
-readonly BASE_EXPR_NAME="${BASE_EXPR_NAME:-"pretrained_roberta_flickr_ja_mixed_2e_b36"}"
+readonly BASE_EXPR_NAME="${BASE_EXPR_NAME:-"pretrained_deberta_flickr_ja_mixed_4e_b28"}"
 EXPR_NAME="${BASE_EXPR_NAME}_jcre3_flickr_ja_${MAX_EPOCH}e_b${GLOBAL_BATCH_SIZE}"
 
 poetry run python -m torch.distributed.launch --nproc_per_node="${DEVICES}" tools/finetune.py \
@@ -14,8 +14,9 @@ poetry run python -m torch.distributed.launch --nproc_per_node="${DEVICES}" tool
   --skip-test \
   --use-tensorboard \
   --evaluate_only_best_on_test \
+  --skip_optimizer_resume \
   OUTPUT_DIR "./OUTPUT/${EXPR_NAME}" \
-  MODEL.WEIGHT "./OUTPUT/${BASE_EXPR_NAME}/ft_task_1/model_0032040.pth" \
+  MODEL.WEIGHT "./OUTPUT/${BASE_EXPR_NAME}/ft_task_1/model_0027462.pth" \
   MODEL.DYHEAD.USE_CHECKPOINT True \
   MODEL.LANGUAGE_BACKBONE.USE_CHECKPOINT True \
   MODEL.BACKBONE.USE_CHECKPOINT True \

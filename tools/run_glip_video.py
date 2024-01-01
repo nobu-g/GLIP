@@ -35,12 +35,6 @@ def parse_args():
         "If not given, will show output in an OpenCV window.",
     )
     parser.add_argument(
-        "--vocabulary",
-        default="lvis",
-        choices=["lvis", "openimages", "objects365", "coco", "custom"],
-        help="",
-    )
-    parser.add_argument(
         "--confidence-threshold",
         type=float,
         default=0.3,
@@ -116,7 +110,7 @@ def main():
     glip_demo = GLIPDemo(
         cfg,
         min_image_size=800,
-        confidence_threshold=0.0,
+        confidence_threshold=args.confidence_threshold,
         show_mask_heatmaps=False,
     )
 

@@ -88,7 +88,12 @@ class GLIPDemo:
     def build_tokenizer(self):
         cfg = self.cfg
         tokenizer = None
-        if cfg.MODEL.LANGUAGE_BACKBONE.TOKENIZER_TYPE in ("bert-base-uncased", "roberta-base", "xlm-roberta-base", "microsoft/mdeberta-v3-base"):
+        if cfg.MODEL.LANGUAGE_BACKBONE.TOKENIZER_TYPE in (
+            "bert-base-uncased",
+            "roberta-base",
+            "xlm-roberta-base",
+            "microsoft/mdeberta-v3-base",
+        ):
             tokenizer = AutoTokenizer.from_pretrained(cfg.MODEL.LANGUAGE_BACKBONE.TOKENIZER_TYPE)
         elif cfg.MODEL.LANGUAGE_BACKBONE.TOKENIZER_TYPE == "clip":
             from transformers import CLIPTokenizerFast

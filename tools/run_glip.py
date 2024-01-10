@@ -1,4 +1,5 @@
 import argparse
+from collections import defaultdict
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Dict, List, Tuple
@@ -14,6 +15,7 @@ from rhoknp import KNP, Document
 from transformers import BatchEncoding
 from yacs.config import CfgNode
 
+from tools.chunk_aligner import align_chunks
 from tools.util import CamelCaseDataClassJsonMixin, Rectangle, get_core_expression
 
 torch.set_grad_enabled(False)
@@ -151,12 +153,18 @@ def predict_glip(cfg: CfgNode, images: list, image_ids: list[str], caption: Docu
             custom_entity.append([[core_start, core_end]])
         char_index += len(base_phrase.text)
 
-    char_index_to_phrase_index: Dict[int, int] = {}
-    char_index = 0
+    chunks_a = []
+    for token_index in range(len(encoded.tokens)):
+        char_span = encoded.token_to_chars(token_index)
+        if char_span is None or encoded.tokens[token_index] == "▁":
+            chunks_a.append(0)
+            continue
+        char_start_index, char_end_index = char_span
+        chunks_a.append(char_end_index - char_start_index)
+    chunks_b = []
     for base_phrase in caption.base_phrases:
-        for _ in range(len(base_phrase.text)):
-            char_index_to_phrase_index[char_index] = base_phrase.global_index
-            char_index += 1
+        chunks_b.append(len(base_phrase.text))
+    token_base_phrase_alignments = align_chunks(chunks_a, chunks_b)
 
     if cfg.MODEL.RPN_ARCHITECTURE == "VLDYHEAD":
         plus = 1
@@ -172,7 +180,7 @@ def predict_glip(cfg: CfgNode, images: list, image_ids: list[str], caption: Docu
         positive_map_label_to_token: Dict[int, List[int]] = glip_demo.positive_map_label_to_token
         boxes_list, scores_list = flickr_post_process(output, positive_map_label_to_token, plus)
 
-        phrase_index_to_bounding_boxes: Dict[int, List[BoundingBox]] = {}
+        phrase_index_to_bounding_boxes: Dict[int, List[BoundingBox]] = defaultdict(list)
         assert (
             len(boxes_list) == len(scores_list) == len(positive_map_label_to_token)
         ), f"{len(boxes_list)}, {len(scores_list)}, {len(positive_map_label_to_token)}"
@@ -188,11 +196,9 @@ def predict_glip(cfg: CfgNode, images: list, image_ids: list[str], caption: Docu
 
             # ensure token_indeices are consecutive
             assert token_indices == list(range(token_indices[0], token_indices[-1] + 1))
-            char_start_index = encoded.token_to_chars(token_indices[0])[0]
-            char_end_index = encoded.token_to_chars(token_indices[-1])[1]
-            for char_index in range(char_start_index, char_end_index):
-                phrase_index = char_index_to_phrase_index[char_index]
-                phrase_index_to_bounding_boxes[phrase_index] = bounding_boxes
+            for token_index in token_indices:
+                for base_phrase_index in token_base_phrase_alignments[token_index]:
+                    phrase_index_to_bounding_boxes[base_phrase_index] += bounding_boxes
 
         phrase_predictions: List[PhrasePrediction] = [
             PhrasePrediction(

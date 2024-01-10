@@ -272,7 +272,7 @@ def main():
     assert len(predictions) == len(images)
     if args.plot:
         for prediction, image, image_id in zip(predictions, images, image_ids):
-            plot_results(image, prediction, export_dir / f"{image_id}.png", confidence_threshold=0.5)
+            plot_results(image, prediction, export_dir / f"{image_id}.png", confidence_threshold=0.3)
 
     for image_id, prediction in zip(image_ids, predictions):
         export_dir.joinpath(f"{image_id}.json").write_text(prediction.to_json(indent=2, ensure_ascii=False))

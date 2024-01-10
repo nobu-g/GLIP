@@ -1,6 +1,6 @@
 def align_chunks(chunks_a: list[int], chunks_b: list[int]) -> list[list[int]]:
     assert sum(chunks_a) == sum(chunks_b)
-    assert all(chunk > 0 for chunk in chunks_a), "The length of each chunk must be positive."
+    # assert all(chunk > 0 for chunk in chunks_a), "The length of each chunk must be positive."
     assert all(chunk > 0 for chunk in chunks_b), "The length of each chunk must be positive."
     alignments: list[list[int]] = []
     item_to_chunk_b: list[int] = []
@@ -8,6 +8,9 @@ def align_chunks(chunks_a: list[int], chunks_b: list[int]) -> list[list[int]]:
         item_to_chunk_b += [i for _ in range(chunk_b)]
     cursor = 0
     for chunk_a in chunks_a:
+        if chunk_a == 0:
+            alignments.append([])
+            continue
         aligned_chunks = sum(alignments, [])
         related_chunks = set()
         for i in range(cursor, cursor + chunk_a):
@@ -19,6 +22,7 @@ def align_chunks(chunks_a: list[int], chunks_b: list[int]) -> list[list[int]]:
         assert len(related_chunks) >= 1
         alignments.append(sorted(related_chunks))
         cursor += chunk_a
+    assert len(alignments) == len(chunks_a), f"{len(alignments)} != {len(chunks_a)}"
     return alignments
 
 
@@ -28,6 +32,11 @@ def test_chunk_aligner():
             "chunk_a": [2, 1, 2],
             "chunk_b": [2, 2, 1],
             "alignments": [[0], [1], [2]],
+        },
+        {
+            "chunk_a": [0, 0, 2, 1, 2],
+            "chunk_b": [2, 2, 1],
+            "alignments": [[], [], [0], [1], [2]],
         },
         {
             "chunk_a": [4, 1],

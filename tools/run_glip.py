@@ -163,7 +163,7 @@ def predict_glip(cfg: CfgNode, images: list, image_ids: list[str], caption: Docu
         chunks_a.append(char_end_index - char_start_index)
     chunks_b = []
     for base_phrase in caption.base_phrases:
-        chunks_b.append(len(base_phrase.text))
+        chunks_b.append(len("".join(base_phrase.text.split("\u3000"))))
     token_base_phrase_alignments = align_chunks(chunks_a, chunks_b)
 
     if cfg.MODEL.RPN_ARCHITECTURE == "VLDYHEAD":
